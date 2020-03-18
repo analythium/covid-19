@@ -49,7 +49,7 @@ slug <- paste0(tolower(gsub(" ", "-",
         "",
         paste0("-", tolower(gsub(" ", "-",
             gsub("[^[:alnum:] ]", "", x$Province.State))))))
-colnames(x) <- c("province-state", "country-region", "latitude", "logitude")
+colnames(x) <- c("province-state", "country-region", "latitude", "longitude")
 x$slug <- slug
 x$location <- loc
 
@@ -71,13 +71,31 @@ for (i in slug) {
     blob[[i]] <- z
 }
 
+## global
+xx <- x[x[["country-region"]]==j,,drop=FALSE]
+z <- data.frame(prov="", country="Global, Combined",
+    latitude=0,
+    longitude=0,
+    slug="global-combined",
+    location="Global, Combined",
+    stringsAsFactors = FALSE)
+    colnames(z) <- colnames(x)
+    rownames(z) <- z$slug
+x <- rbind(x, z)
+zz <- data.frame(date=as.Date(d),
+    confirmed=colSums(x_c),
+    deaths=colSums(x_d),
+    recovered=colSums(x_r))
+rownames(zz) <- NULL
+blob[[z$slug]] <- zz
+
 ## combined data
 biggies <- unique(x[["country-region"]][duplicated(x[["country-region"]])])
 for (j in biggies) {
     xx <- x[x[["country-region"]]==j,,drop=FALSE]
     z <- data.frame(prov="", country=paste0(j, ", Combined"),
         latitude=mean(xx$latitude),
-        longitude=mean(xx$logitude),
+        longitude=mean(xx$longitude),
         slug=paste0(tolower(j), "-combined"),
         location=paste0(j, ", Combined"),
         stringsAsFactors = FALSE)
@@ -135,7 +153,7 @@ for (i in rownames(x)) {
     if (is.null(out)) {
         OK[i] <- FALSE
     } else {
-        dir.create(paste0("_stats/", i))
+        dir.create(paste0("_stats/api/", i))
         writeLines(toJSON(out), paste0("_stats/api/", i, "/index.json"))
     }
 }
