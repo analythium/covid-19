@@ -13,3 +13,6 @@ https://psolymos.github.io/covid-19/
 
 For example the slug `canada-combined` takes us to
 https://psolymos.github.io/covid-19/canada-combined/
+
+Travis CI is updating the API using a daily cron job:
+https://travis-ci.org/github/psolymos/covid-19
