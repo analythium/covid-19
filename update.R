@@ -114,7 +114,7 @@ predict_covid <- function(k, m=14) {
         ),
         predicted=list(
             date=as.Date(
-                seq(d[length(d)]+24*60*60, d[length(d)]+14*24*60*60, 24*60*60)),
+                seq(d[length(d)]+1, d[length(d)]+m, 1)),
             mean=unclass(pm[,1]),
             lower=unclass(pm[,2]),
             upper=unclass(pm[,3])
