@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-library(jsonlite)
-library(forecast)
+suppressPackageStartupMessages(library(jsonlite))
+suppressPackageStartupMessages(library(forecast))
 
 ## grab latest data
 baseurl <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
@@ -72,7 +72,6 @@ for (i in slug) {
 }
 
 ## global
-xx <- x[x[["country-region"]]==j,,drop=FALSE]
 z <- data.frame(prov="", country="Global, Combined",
     latitude=0,
     longitude=0,
