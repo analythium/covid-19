@@ -126,8 +126,8 @@ predict_covid <- function(k, m=14) {
 ## write output
 dir.create("_stats")
 OK <- rep(TRUE, nrow(x))
-names(OK) <- slug
-for (i in slug) {
+names(OK) <- rownames(x)
+for (i in rownames(x)) {
     out <- try(predict_covid(i), silent = TRUE)
     if (inherits(out, "try-error"))
         out <- NULL
