@@ -125,6 +125,7 @@ predict_covid <- function(k, m=14) {
 
 ## write output
 dir.create("_stats")
+dir.create("_stats/api")
 OK <- rep(TRUE, nrow(x))
 names(OK) <- rownames(x)
 for (i in rownames(x)) {
@@ -135,7 +136,7 @@ for (i in rownames(x)) {
         OK[i] <- FALSE
     } else {
         dir.create(paste0("_stats/", i))
-        writeLines(toJSON(out), paste0("_stats/", i, "/index.json"))
+        writeLines(toJSON(out), paste0("_stats/api/", i, "/index.json"))
     }
 }
-writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/index.json")
+writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/api/index.json")

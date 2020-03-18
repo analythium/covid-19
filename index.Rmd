@@ -1,0 +1,34 @@
+---
+title: "COVID-19 Explorer"
+output: html_document
+runtime: shiny
+---
+
+```{r include=FALSE}
+library(jsonlite)
+baseurl <- "https://psolymos.github.io/covid-19/"
+x <- fromJSON(baseurl)
+Plot <- function(x, ...) {
+    plot(as.Date(x$observed$date),
+        x$observed$confirmed,
+        type="l", lwd=2,
+        xlim=range(as.Date(c(x$observed$date,
+        x$predicted$date))), ylim=c(1, max(x$predicted$upper)),
+        log="y", las=1,
+        main=x$region$location, xlab="Date", ylab="Confirmed")
+    polygon(as.Date(c(x$predicted$date, rev(x$predicted$date))),
+            c(x$predicted$lower, rev(x$predicted$upper)),
+            border="grey", col="grey")
+    lines(as.Date(x$predicted$date), x$predicted$mean, lty=2)
+    invisible(x)
+}
+
+```
+
+```{r}
+i <- "canada-combined"
+z <- fromJSON(paste0(baseurl, i))
+renderPlot({
+    Plot(z)
+})
+```

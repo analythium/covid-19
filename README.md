@@ -9,10 +9,10 @@ static JSON API using GitHub pages.
 Countries with multiple provinces/states are also combined.
 
 The API is based on the slugified region names that are listed here:
-https://psolymos.github.io/covid-19/
+https://psolymos.github.io/covid-19/api/
 
 For example the slug `canada-combined` takes us to
-https://psolymos.github.io/covid-19/canada-combined/
+https://psolymos.github.io/covid-19/api/canada-combined/
 
 Travis CI is updating the API using a daily cron job:
 https://travis-ci.org/github/psolymos/covid-19
