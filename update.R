@@ -140,11 +140,14 @@ predict_covid <- function(k, m=14) {
     out
 }
 
+#options(warn=2)
+
 ## write output
 dir.create("_stats")
 dir.create("_stats/api")
 OK <- rep(TRUE, nrow(x))
 names(OK) <- rownames(x)
+clean <- list()
 for (i in rownames(x)) {
     out <- try(predict_covid(i), silent = TRUE)
     if (inherits(out, "try-error"))
@@ -154,6 +157,10 @@ for (i in rownames(x)) {
     } else {
         dir.create(paste0("_stats/api/", i))
         writeLines(toJSON(out), paste0("_stats/api/", i, "/index.json"))
+        clean[[i]] <- out
     }
 }
 writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/api/index.json")
+
+save(x, blob, clean, file="_stats/data.RData")
+
