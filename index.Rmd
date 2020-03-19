@@ -6,8 +6,11 @@ runtime: shiny
 
 ```{r include=FALSE}
 library(jsonlite)
-baseurl <- "https://psolymos.github.io/covid-19/"
+baseurl <- "https://psolymos.github.io/covid-19/api/"
 x <- fromJSON(baseurl)
+## this is the table that lists all the regions/countries
+str(x)
+## use the 'slug' as ID
 Plot <- function(x, ...) {
     plot(as.Date(x$observed$date),
         x$observed$confirmed,
@@ -22,6 +25,26 @@ Plot <- function(x, ...) {
     lines(as.Date(x$predicted$date), x$predicted$mean, lty=2)
     invisible(x)
 }
+
+i <- "global-combined"
+z <- fromJSON(paste0(baseurl, i))
+Plot(z)
+
+i <- "canada-combined"
+z <- fromJSON(paste0(baseurl, i))
+Plot(z)
+
+i <- "canada-alberta"
+z <- fromJSON(paste0(baseurl, i))
+Plot(z)
+
+i <- "morocco"
+z <- fromJSON(paste0(baseurl, i))
+Plot(z)
+
+i <- "hungary"
+z <- fromJSON(paste0(baseurl, i))
+Plot(z)
 
 ```
 
