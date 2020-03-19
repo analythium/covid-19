@@ -161,9 +161,9 @@ library(PVAClone)
 
 dat <- data.frame(
   date=c("2020-03-05", "2020-03-06", "2020-03-07", "2020-03-08", "2020-03-09", "2020-03-10", "2020-03-11",
-         "2020-03-12", "2020-03-13", "2020-03-14", "2020-03-15", "2020-03-16", "2020-03-17"),
+         "2020-03-12", "2020-03-13", "2020-03-14", "2020-03-15", "2020-03-16", "2020-03-17", "2020-03-18"),
   cases=c(1, 2, 2, 4, 7, 14, 19,
-          23, 29, 39, 56, 74, 97))
+          23, 29, 39, 56, 74, 97, 119))
 
 m <- pva(dat$cases, ricker("none"), 10)
 
@@ -180,3 +180,134 @@ plot(prx, pr, type="l",
     ylab="# of cases", xlab=paste("Days since", dat$date[1]))
 lines(seq_len(nrow(dat))-1, dat$cases, col=2, type="b", lwd=2, pch=19)
 abline(h=K, col=4, lty=3)
+
+diff(dat$cases)/dat$cases[-length(dat$cases)]
+
+library(forecast)
+f <- ets(log(dat$cases[-length(dat$cases)]))
+plot(forecast(f, 14))
+
+## clustering
+
+nmin <- 14
+nn <- sapply(clean, function(z) length(z$observed$date))
+nn <- nn[nn >= nmin]
+N <- length(nn)
+D <- matrix(Inf, length(clean), length(clean))
+rownames(D) <- colnames(D) <- names(clean)
+K <- D
+K[] <- 0
+diag(D) <- 0
+
+fun <- function(i, j, last_only=TRUE) {
+  si <- clean[[i]]
+  sj <- clean[[j]]
+  yi <- si$observed$confirmed
+  names(yi) <- si$observed$date
+  yj <- sj$observed$confirmed
+  names(yj) <- sj$observed$date
+  n <- min(length(yi), length(yj))
+  if (n >= nmin) {
+    ## we want to match the end of the time series
+    yi <- rev(rev(yi)[seq_len(n)])
+    yi <- yi / yi[1L]
+
+    if (last_only) {
+      yj <- rev(rev(yj)[seq_len(n)])
+      yj <- yj / yj[1L]
+    }
+
+    m <- length(yj) - length(yi)
+    lyi <- log(yi)
+    if (m == 0) {
+      dij <- sum((lyi - log(yj))^2)
+    } else {
+      d <- numeric(m)
+      for (k in seq_len(m)) {
+        z <- yj[k:(k+n-1L)]
+        z <- z / z[1L]
+        d[k] <- sum((lyi - log(z))^2)
+      }
+      k <- which.min(d)
+      dij <- d[k]
+      z <- yj[k:(k+n-1L)]
+      z <- z / z[1L]
+    }
+    out <- list(d=dij, k=k)
+  } else {
+    out <- list(d=Inf, k=0)
+  }
+  out
+}
+
+for (iii in seq_len(N)) {
+  for (jjj in seq_len(iii-1L)) {
+    ui <- names(nn)[iii]
+    uj <- names(nn)[jjj]
+    v <- fun(ui, uj)
+    D[ui,uj] <- D[uj,ui] <- v$d
+    K[ui,uj] <- K[uj,ui] <- v$k
+  }
+}
+range(K)
+range(D)
+D[is.infinite(D)] <- max(D[is.finite(D)])
+
+
+i <- "canada-alberta"
+dd <- D[i, colnames(D) != i]
+dd[which.min(dd)]
+
+dm <- as.dist(D)
+h <- hclust(dm)
+
+library(vegan)
+
+mds <- monoMDS(dm)
+plot(mds)
+
+i <- "canada-alberta"
+
+si <- clean[[i]]
+jj <- names(clean)[names(clean) != i]
+
+
+#j <- "canada-british-columbia"
+for (j in jj) {
+  sj <- clean[[j]]
+
+  yi <- si$observed$confirmed
+  names(yi) <- si$observed$date
+  yj <- sj$observed$confirmed
+  names(yj) <- sj$observed$date
+  n <- min(length(yi), length(yj))
+  if (n >= nmin) {
+    ## we want to match the end of the time series
+    yi <- rev(rev(yi)[seq_len(n)])
+    yi <- yi / yi[1L]
+
+    m <- length(yj) - length(yi)
+    lyi <- log(yi)
+    if (m == 0) {
+      dij <- sum((lyi - log(yj))^2)
+      #d1 <- names(lyi)[1L]
+    } else {
+      d <- numeric(m)
+      for (k in seq_len(m)) {
+        z <- yj[k:(k+n-1L)]
+        z <- z / z[1L]
+        d[k] <- sum((lyi - log(z))^2)
+      }
+      k <- which.min(d)
+      dij <- d[k]
+      #d1 <- names(yj)[k]
+      z <- yj[k:(k+n-1L)]
+      z <- z / z[1L]
+    }
+    D[j,"d"] <- dij
+    D[j,"k"] <- k
+  }
+}
+
+logyi <- log(yi[seq_len(n)])
+logyj <- log(yj[seq_len(n)])
