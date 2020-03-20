@@ -9,10 +9,13 @@ static JSON API using GitHub pages.
 Countries with multiple provinces/states are also combined.
 
 The API is based on the slugified region names that are listed here:
-https://psolymos.github.io/covid-19/api/
+https://psolymos.github.io/covid-19/api/v1/regions/
 
 For example the slug `canada-combined` takes us to
-https://psolymos.github.io/covid-19/api/canada-combined/
+https://psolymos.github.io/covid-19/api/v1/regions/canada-combined/
+
+The date of last update and R session info can be found at
+https://psolymos.github.io/covid-19/api/v1/
 
 Travis CI is updating the API using a daily cron job:
 https://travis-ci.org/github/psolymos/covid-19
