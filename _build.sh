@@ -15,6 +15,7 @@ git config --global user.name "Peter Solymos"
 git clone -b gh-pages https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git output
 cd output
 cp -r ../_stats/* ./
+cp -r ../www/* ./
 git add --all *
 git commit -m "Update json data (${TRAVIS_BUILD_NUMBER})" || true
 git push -q origin gh-pages
