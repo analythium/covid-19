@@ -140,11 +140,11 @@ predict_covid <- function(k, m=14) {
     out
 }
 
-#options(warn=2)
-
 ## write output
 dir.create("_stats")
 dir.create("_stats/api")
+dir.create("_stats/api/v1")
+dir.create("_stats/api/v1/regions")
 OK <- rep(TRUE, nrow(x))
 names(OK) <- rownames(x)
 clean <- list()
@@ -155,12 +155,17 @@ for (i in rownames(x)) {
     if (is.null(out)) {
         OK[i] <- FALSE
     } else {
-        dir.create(paste0("_stats/api/", i))
-        writeLines(toJSON(out), paste0("_stats/api/", i, "/index.json"))
+        dir.create(paste0("_stats/api/v1/regions/", i))
+        writeLines(toJSON(out),
+            paste0("_stats/api/v1/regions/", i, "/index.json"))
         clean[[i]] <- out
     }
 }
-writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/api/index.json")
+writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/api/v1/regions/index.json")
+
+info <- list(date=Sys.time(), session=unclass(sessionInfo()))
+info$session <- lapply(info$session, function(z) lapply(z, unclass))
+writeLines(toJSON(info), "_stats/api/v1/index.json")
 
 save(x, blob, clean, file="_stats/data.RData")
 
