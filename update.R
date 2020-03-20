@@ -211,4 +211,5 @@ info <- list(date=Sys.time(), session=unclass(sessionInfo()))
 info$session <- lapply(info$session, function(z) lapply(z, unclass))
 writeLines(toJSON(info), "_stats/api/v1/index.json")
 #' Save R output for possible reuse by other scripts as needed
-save(x, blob, clean, file="_stats/data.RData")
+dir.create("_stats/data")
+save(x, blob, clean, file="_stats/data/covid-19.RData")
