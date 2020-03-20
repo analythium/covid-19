@@ -139,8 +139,12 @@
                 </div>
               </div>
             </div>
-            <a class="navbar-item is-size-5 has-text-weight-semibold">
-              Notes
+            <a
+              class="navbar-item is-size-5 has-text-weight-semibold"
+              href="./methods/"
+              target="_blank"
+            >
+              Methods
             </a>
             <a
               class="navbar-item is-size-5 has-text-weight-semibold"
@@ -167,7 +171,7 @@
             </div>
           </div>
 
-          <section class="section">
+          <!-- <section class="section">
             <div class="columns">
               <div class="column is-8 is-offset-2">
                 <div class="content is-medium">
@@ -178,7 +182,7 @@
                 </div>
               </div>
             </div>
-          </section>
+          </section> -->
         </div>
       </div>
     </section>
@@ -188,142 +192,136 @@
         <p id="footer"></p>
       </div>
     </footer>
-  <script type="text/javascript" src="./assets/jquery.min.js"></script>
-  <script
-    type="text/javascript"
-    src="./assets/typeahead.bundle.min.js"
-  ></script>
-  <script type="text/javascript" src="./assets/charts.js"></script>
-  <script>
-    $(document).ready(function() {
-      $.getJSON(
-        "./api/v1/index.json",
-        function(data) {
+    <script type="text/javascript" src="./assets/jquery.min.js"></script>
+    <script
+      type="text/javascript"
+      src="./assets/typeahead.bundle.min.js"
+    ></script>
+    <script type="text/javascript" src="./assets/charts.js"></script>
+    <script>
+      $(document).ready(function() {
+        $.getJSON("./api/v1/index.json", function(data) {
           $("#footer").html(
             "&copy; " +
               new Date().getFullYear() +
               ' <a href="https://www.analythium.io/" target="_blank">Analythium Solutions</a> under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a> license.<br />Last updated: ' +
               data.date
           );
-        }
-      );
+        });
 
-      // launch modal
-      $(".image-modal").click(function() {
-        var target = $(this).data("target");
-        $(target).addClass("is-active");
-      });
-      // close modal by clicking (X)
-      $(".modal-close").click(function() {
-        $(".modal").removeClass("is-active");
-      });
-      // close modal by Esc
-      $(document).keyup(function(e) {
-        if (e.keyCode == 27) {
+        // launch modal
+        $(".image-modal").click(function() {
+          var target = $(this).data("target");
+          $(target).addClass("is-active");
+        });
+        // close modal by clicking (X)
+        $(".modal-close").click(function() {
           $(".modal").removeClass("is-active");
-        }
-      });
+        });
+        // close modal by Esc
+        $(document).keyup(function(e) {
+          if (e.keyCode == 27) {
+            $(".modal").removeClass("is-active");
+          }
+        });
 
-      // burger navbar
-      var burger = document.querySelector(".burger");
-      var menu = document.querySelector("#" + burger.dataset.target);
-      burger.addEventListener("click", function() {
-        burger.classList.toggle("is-active");
-        menu.classList.toggle("is-active");
-      });
+        // burger navbar
+        var burger = document.querySelector(".burger");
+        var menu = document.querySelector("#" + burger.dataset.target);
+        burger.addEventListener("click", function() {
+          burger.classList.toggle("is-active");
+          menu.classList.toggle("is-active");
+        });
 
-      var tsChart = new Chart(document.getElementById("line-chart"), {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            {
-              data: [],
-              label: "Confirmed",
-              borderColor: "#3e95cd",
-              fill: false
-            },
-            {
-              data: [],
-              label: "Forecast",
-              borderColor: "#8e5ea2",
-              fill: false
-              // },
-              // {
-              //   data: [],
-              //   label: "2.5%",
-              //   borderColor: "#8e5e80",
-              //   borderWidth: 1,
-              //   fill: false
-              // },
-              // {
-              //   data: [],
-              //   label: "97.5%",
-              //   borderColor: "#8e5e80",
-              //   borderWidth: 1,
-              //   fill: false
-            }
-          ]
-        },
-        options: {
-          title: {
-            display: true,
-            text: ""
-          },
-          scales: {
-            yAxes: [
+        var tsChart = new Chart(document.getElementById("line-chart"), {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
               {
-                id: "y-axis",
-                type: "linear"
+                data: [],
+                label: "Confirmed",
+                borderColor: "#3e95cd",
+                fill: false
+              },
+              {
+                data: [],
+                label: "Forecast",
+                borderColor: "#8e5ea2",
+                fill: false
+                // },
+                // {
+                //   data: [],
+                //   label: "2.5%",
+                //   borderColor: "#8e5e80",
+                //   borderWidth: 1,
+                //   fill: false
+                // },
+                // {
+                //   data: [],
+                //   label: "97.5%",
+                //   borderColor: "#8e5e80",
+                //   borderWidth: 1,
+                //   fill: false
               }
             ]
+          },
+          options: {
+            title: {
+              display: true,
+              text: ""
+            },
+            scales: {
+              yAxes: [
+                {
+                  id: "y-axis",
+                  type: "linear"
+                }
+              ]
+            }
           }
-        }
-      });
-
-      function updateTsChart(chart, ts) {
-        // get relevant pieces from ts object
-        var labels = ts.observed.date.concat(ts.predicted.date);
-        var yobs = ts.observed.confirmed;
-        var ypred = ts.predicted.mean;
-        var ylower = ts.predicted.lower;
-        var yupper = ts.predicted.upper;
-        for (var i = 0; i < ts.observed.confirmed.length; i++) {
-          ypred.unshift(null);
-          ylower.unshift(null);
-          yupper.unshift(null);
-        }
-        for (var i = 0; i < ts.predicted.mean.length; i++) {
-          yobs.push(null);
-        }
-        // remove data
-        chart.data.labels.pop();
-        chart.data.datasets.forEach(dataset => {
-          dataset.data.pop();
         });
-        // update data
-        chart.options.title.text = ts.region.location;
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = yobs;
-        chart.data.datasets[1].data = ypred;
-        // chart.data.datasets[2].data = ylower;
-        // chart.data.datasets[3].data = yupper;
-        chart.update();
-      }
 
-      // default plot
-      $.getJSON(
-        "./api/v1/regions/global-combined/index.json",
-        function(data) {
+        function updateTsChart(chart, ts) {
+          // get relevant pieces from ts object
+          var labels = ts.observed.date.concat(ts.predicted.date);
+          var yobs = ts.observed.confirmed;
+          var ypred = ts.predicted.mean;
+          var ylower = ts.predicted.lower;
+          var yupper = ts.predicted.upper;
+          for (var i = 0; i < ts.observed.confirmed.length; i++) {
+            ypred.unshift(null);
+            ylower.unshift(null);
+            yupper.unshift(null);
+          }
+          for (var i = 0; i < ts.predicted.mean.length; i++) {
+            yobs.push(null);
+          }
+          // remove data
+          chart.data.labels.pop();
+          chart.data.datasets.forEach(dataset => {
+            dataset.data.pop();
+          });
+          // update data
+          chart.options.title.text = ts.region.location;
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = yobs;
+          chart.data.datasets[1].data = ypred;
+          // chart.data.datasets[2].data = ylower;
+          // chart.data.datasets[3].data = yupper;
+          chart.update();
+        }
+
+        // default plot
+        $.getJSON("./api/v1/regions/global-combined/index.json", function(
+          data
+        ) {
           //plotTs(data);
           updateTsChart(tsChart, data);
-        }
-      );
+        });
 
-      // get regions array
-      $.getJSON(
-        "./api/v1/regions/index.json",
-        function(data) {
+        // get regions array
+        $.getJSON("./api/v1/regions/index.json", function(data) {
           var species = data.map(val => val.location);
           var link = data.map(val => val.slug);
 
@@ -387,9 +385,8 @@
               );
             }
           });
-        }
-      );
-    });
-  </script>
+        });
+      });
+    </script>
   </body>
 </html>
