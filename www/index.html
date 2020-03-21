@@ -200,7 +200,11 @@
     <script type="text/javascript" src="./assets/charts.js"></script>
     <script>
       $(document).ready(function() {
-        $.getJSON("./api/v1/index.json", function(data) {
+
+        const baseurl = "."
+        //const baseurl = "https://analythium.github.io/covid-19"
+
+        $.getJSON(baseurl + "/api/v1/index.json", function(data) {
           $("#footer").html(
             "&copy; " +
               new Date().getFullYear() +
@@ -242,27 +246,27 @@
                 data: [],
                 label: "Confirmed",
                 borderColor: "#3e95cd",
-                fill: false
+                fill: true
               },
               {
                 data: [],
                 label: "Forecast",
                 borderColor: "#8e5ea2",
                 fill: false
-                // },
-                // {
-                //   data: [],
-                //   label: "2.5%",
-                //   borderColor: "#8e5e80",
-                //   borderWidth: 1,
-                //   fill: false
-                // },
-                // {
-                //   data: [],
-                //   label: "97.5%",
-                //   borderColor: "#8e5e80",
-                //   borderWidth: 1,
-                //   fill: false
+                },
+                {
+                 data: [],
+                 label: "2.5%",
+                 borderColor: "#8e5e80",
+                 borderWidth: 1,
+                 fill: false
+                },
+                {
+                 data: [],
+                   label: "97.5%",
+                   borderColor: "#8e5e80",
+                   borderWidth: 1,
+                   fill: false
               }
             ]
           },
@@ -275,7 +279,15 @@
               yAxes: [
                 {
                   id: "y-axis",
-                  type: "linear"
+                  type: "linear",
+                  scaleLabel: {
+                    display: true,
+                    labelString: 'Cumulative # of confirmed cases'
+                  },
+                  ticks: {
+                    min: 0,
+                    max: 1
+                  }
                 }
               ]
             }
@@ -303,17 +315,19 @@
             dataset.data.pop();
           });
           // update data
+          var maxVal = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5)
           chart.options.title.text = ts.region.location;
+          chart.options.scales.yAxes[0].ticks.max = maxVal;
           chart.data.labels = labels;
           chart.data.datasets[0].data = yobs;
           chart.data.datasets[1].data = ypred;
-          // chart.data.datasets[2].data = ylower;
-          // chart.data.datasets[3].data = yupper;
+          chart.data.datasets[2].data = ylower;
+          chart.data.datasets[3].data = yupper;
           chart.update();
         }
 
         // default plot
-        $.getJSON("./api/v1/regions/global-combined/index.json", function(
+        $.getJSON(baseurl + "/api/v1/regions/global-combined/index.json", function(
           data
         ) {
           //plotTs(data);
@@ -321,7 +335,7 @@
         });
 
         // get regions array
-        $.getJSON("./api/v1/regions/index.json", function(data) {
+        $.getJSON(baseurl + "/api/v1/regions/index.json", function(data) {
           var species = data.map(val => val.location);
           var link = data.map(val => val.slug);
 
@@ -376,7 +390,7 @@
             var OK = checkSpecies(species, spp);
             if (spp != "" && OK == true) {
               $.getJSON(
-                "./api/v1/regions/" +
+                baseurl + "/api/v1/regions/" +
                   link[species.indexOf(spp)] +
                   "/index.json",
                 function(data) {
