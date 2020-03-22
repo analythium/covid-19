@@ -222,4 +222,4 @@ save(x, blob, clean, file="_stats/data/covid-19.RData")
 #' The date of last update and R session info can be found at
 #' https://analythium.github.io/covid-19/api/v1/.
 #' [Travis CI](https://travis-ci.org/github/analythium/covid-19)
-#' is updating the API using a daily cron job:
+#' is updating the API using a daily cron job.

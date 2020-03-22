@@ -176,7 +176,7 @@
               <div class="column is-8 is-offset-2">
                 <div class="content is-medium">
                   <p>
-                    Data shown here reflects the current number of cases (confirmed &ndash; recovered &ndash; deaths) by regions. We analyzed the time series of current cases starting from the 1st day of confirmed cases in that region. We used exponential smoothing state space model to fit a time series model to the natural logarithm transformed confirmed data. We the forecast based on this models providing the point predictions and 95% confidence limits.
+                    Data shown here reflect the current number of cases (confirmed &ndash; recovered &ndash; deaths) by region. We analyzed the time series of current cases starting from the 1st day of confirmed cases in that region. We used exponential smoothing state space model to fit a time series model to the natural logarithm transformed data. We then forecast based on this models providing the point predictions and 95% confidence limits.
                   </p>
                   <p>
                     The Website relies upon publicly available and daily updated data from multiple sources as discribed on the <a href="https://github.com/CSSEGISandData/COVID-19" target="_blank">JHU CSSE</a> page.
@@ -216,22 +216,6 @@
               ' <a href="https://www.analythium.io/" target="_blank">Analythium Solutions</a> under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> license.<br />Last updated: ' +
               data.date
           );
-        });
-
-        // launch modal
-        $(".image-modal").click(function() {
-          var target = $(this).data("target");
-          $(target).addClass("is-active");
-        });
-        // close modal by clicking (X)
-        $(".modal-close").click(function() {
-          $(".modal").removeClass("is-active");
-        });
-        // close modal by Esc
-        $(document).keyup(function(e) {
-          if (e.keyCode == 27) {
-            $(".modal").removeClass("is-active");
-          }
         });
 
         // burger navbar
