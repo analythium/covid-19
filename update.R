@@ -151,7 +151,7 @@ for (j in biggies) {
 #' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the natural logarithm transformed cases time series,
 #' * forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),
 #' * return the raw data, observed time series, and tack transformed predictions as a list.
-predict_covid <- function(k, m=14) {
+predict_covid <- function(k, m) {
     z <- blob[[k]]
     if (sum(z$confirmed, na.rm=TRUE) == 0)
         return(NULL)
@@ -194,7 +194,7 @@ OK <- rep(TRUE, nrow(x))
 names(OK) <- rownames(x)
 clean <- list()
 for (i in rownames(x)) {
-    out <- try(predict_covid(i, 14), silent = TRUE)
+    out <- try(predict_covid(i, 7), silent = TRUE)
     if (inherits(out, "try-error"))
         out <- NULL
     if (is.null(out)) {
