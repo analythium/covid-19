@@ -283,8 +283,6 @@
           }
         });
 
-        const nTs = 7;
-
         function updateTsChart(chart, ts) {
           // get relevant pieces from ts object
           var labels = ts.observed.date.concat(ts.predicted.date);
@@ -292,7 +290,7 @@
           var ypred = ts.predicted.mean;
           var ylower = ts.predicted.lower;
           var yupper = ts.predicted.upper;
-          for (var i = 0; i < nTs; i++) {
+          for (var i = 0; i < ts.observed.current.length; i++) {
             ypred.unshift(null);
             ylower.unshift(null);
             yupper.unshift(null);
