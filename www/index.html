@@ -171,18 +171,23 @@
             </div>
           </div>
 
-          <!-- <section class="section">
+          <section class="section">
             <div class="columns">
               <div class="column is-8 is-offset-2">
                 <div class="content is-medium">
-                  <h1 class="title">Notes</h1>
                   <p>
-                    Placeholder text
+                    Data shown here reflects the current number of cases (confirmed &ndash; recovered &ndash; deaths) by regions. We analyzed the time series of current cases starting from the 1st day of confirmed cases in that region. We used exponential smoothing state space model to fit a time series model to the natural logarithm transformed confirmed data. We the forecast based on this models providing the point predictions and 95% confidence limits.
+                  </p>
+                  <p>
+                    The Website relies upon publicly available and daily updated data from multiple sources as discribed on the <a href="https://github.com/CSSEGISandData/COVID-19" target="_blank">JHU CSSE</a> page.
+                  </p>
+                  <p>
+                    Analythium Solutions hereby disclaims any and all representations and warranties with respect to the Website, including accuracy, fitness for use, and merchantability. Reliance on the Website for medical guidance or use of the Website in commerce is strictly prohibited.
                   </p>
                 </div>
               </div>
             </div>
-          </section> -->
+          </section>
         </div>
       </div>
     </section>
@@ -244,7 +249,7 @@
             datasets: [
               {
                 data: [],
-                label: "Confirmed",
+                label: "Current cases",
                 borderColor: "#3e95cd",
                 fill: true
               },
@@ -282,7 +287,7 @@
                   type: "linear",
                   scaleLabel: {
                     display: true,
-                    labelString: 'Cumulative # of confirmed cases'
+                    labelString: 'Number of current cases'
                   },
                   ticks: {
                     min: 0,
@@ -297,11 +302,11 @@
         function updateTsChart(chart, ts) {
           // get relevant pieces from ts object
           var labels = ts.observed.date.concat(ts.predicted.date);
-          var yobs = ts.observed.confirmed;
+          var yobs = ts.observed.current;
           var ypred = ts.predicted.mean;
           var ylower = ts.predicted.lower;
           var yupper = ts.predicted.upper;
-          for (var i = 0; i < ts.observed.confirmed.length; i++) {
+          for (var i = 0; i < ts.observed.current.length; i++) {
             ypred.unshift(null);
             ylower.unshift(null);
             yupper.unshift(null);
