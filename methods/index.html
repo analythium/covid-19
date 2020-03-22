@@ -492,8 +492,9 @@ for (j in biggies) {
 <h2>Time series analysis and forecasting</h2>
 <p>Define a function that:</p>
 <ul>
-<li>takes the time series of confirmed cases starting at the 1st day of infections at that location,</li>
-<li>fit <a href="http://www.exponentialsmoothing.net/">exponential smoothing state space model (ETS)</a> to the natural logarithm transformed confirmed cases time series,</li>
+<li>takes the time series of cases starting at the 1st day of infections at that location,</li>
+<li>calculate the current number of cases (confirmed - recovered - deaths),</li>
+<li>fit <a href="http://www.exponentialsmoothing.net/">exponential smoothing state space model (ETS)</a> to the natural logarithm transformed cases time series,</li>
 <li>forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),</li>
 <li>return the raw data, observed time series, and tack transformed predictions as a list.</li>
 </ul>
@@ -503,7 +504,7 @@ for (j in biggies) {
         return(NULL)
     day1 &lt;- min(which(diff(z$confirmed) &gt; 0)) + 1L
     z &lt;- z[day1:nrow(z),,drop=FALSE]
-    y &lt;- z$confirmed
+    y &lt;- pmax(0, z$confirmed - z$recovered - z$deaths)
     n &lt;- length(y)
     f &lt;- ets(log(y))
     p &lt;- forecast(f, m)
@@ -514,7 +515,7 @@ for (j in biggies) {
         rawdata=as.list(blob[[k]]),
         observed=list(
             date=as.Date(z$date),
-            confirmed=z$confirmed
+            current=y
         ),
         predicted=list(
             date=as.Date(
@@ -539,7 +540,7 @@ dir.create(&quot;_stats/api/v1/regions&quot;)</code></pre>
 names(OK) &lt;- rownames(x)
 clean &lt;- list()
 for (i in rownames(x)) {
-    out &lt;- try(predict_covid(i), silent = TRUE)
+    out &lt;- try(predict_covid(i, 14), silent = TRUE)
     if (inherits(out, &quot;try-error&quot;))
         out &lt;- NULL
     if (is.null(out)) {
@@ -559,6 +560,7 @@ writeLines(toJSON(info), &quot;_stats/api/v1/index.json&quot;)</code></pre>
 <p>Save R output for possible reuse by other scripts as needed</p>
 <pre class="r"><code>dir.create(&quot;_stats/data&quot;)
 save(x, blob, clean, file=&quot;_stats/data/covid-19.RData&quot;)</code></pre>
+<p>The API is based on the slugified region names that are listed here: <a href="https://analythium.github.io/covid-19/api/v1/regions/" class="uri">https://analythium.github.io/covid-19/api/v1/regions/</a>. For example the slug <code>canada-combined</code> takes us to <a href="https://analythium.github.io/covid-19/api/v1/regions/canada-combined/" class="uri">https://analythium.github.io/covid-19/api/v1/regions/canada-combined/</a>. The date of last update and R session info can be found at <a href="https://analythium.github.io/covid-19/api/v1/" class="uri">https://analythium.github.io/covid-19/api/v1/</a>. <a href="https://travis-ci.org/github/analythium/covid-19">Travis CI</a> is updating the API using a daily cron job:</p>
 </div>
 
 
