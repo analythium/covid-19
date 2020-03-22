@@ -146,8 +146,9 @@ for (j in biggies) {
 #'
 #' Define a function that:
 #'
-#' * takes the time series of confirmed cases starting at the 1st day of infections at that location,
-#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the natural logarithm transformed confirmed cases time series,
+#' * takes the time series of cases starting at the 1st day of infections at that location,
+#' * calculate the current number of cases (confirmed - recovered - deaths),
+#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the natural logarithm transformed cases time series,
 #' * forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),
 #' * return the raw data, observed time series, and tack transformed predictions as a list.
 predict_covid <- function(k, m=14) {
@@ -156,7 +157,7 @@ predict_covid <- function(k, m=14) {
         return(NULL)
     day1 <- min(which(diff(z$confirmed) > 0)) + 1L
     z <- z[day1:nrow(z),,drop=FALSE]
-    y <- z$confirmed
+    y <- pmax(0, z$confirmed - z$recovered - z$deaths)
     n <- length(y)
     f <- ets(log(y))
     p <- forecast(f, m)
@@ -167,7 +168,7 @@ predict_covid <- function(k, m=14) {
         rawdata=as.list(blob[[k]]),
         observed=list(
             date=as.Date(z$date),
-            confirmed=z$confirmed
+            current=y
         ),
         predicted=list(
             date=as.Date(
@@ -193,7 +194,7 @@ OK <- rep(TRUE, nrow(x))
 names(OK) <- rownames(x)
 clean <- list()
 for (i in rownames(x)) {
-    out <- try(predict_covid(i), silent = TRUE)
+    out <- try(predict_covid(i, 14), silent = TRUE)
     if (inherits(out, "try-error"))
         out <- NULL
     if (is.null(out)) {
@@ -213,3 +214,12 @@ writeLines(toJSON(info), "_stats/api/v1/index.json")
 #' Save R output for possible reuse by other scripts as needed
 dir.create("_stats/data")
 save(x, blob, clean, file="_stats/data/covid-19.RData")
+#'
+#' The API is based on the slugified region names that are listed here:
+#' https://analythium.github.io/covid-19/api/v1/regions/.
+#' For example the slug `canada-combined` takes us to
+#' https://analythium.github.io/covid-19/api/v1/regions/canada-combined/.
+#' The date of last update and R session info can be found at
+#' https://analythium.github.io/covid-19/api/v1/.
+#' [Travis CI](https://travis-ci.org/github/analythium/covid-19)
+#' is updating the API using a daily cron job:
