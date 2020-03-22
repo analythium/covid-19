@@ -1,23 +1,26 @@
 ---
 title: "COVID-19 Explorer"
 output: html_document
-runtime: shiny
 ---
 
 ```{r include=FALSE}
 library(jsonlite)
-baseurl <- "https://psolymos.github.io/covid-19/api/"
-x <- fromJSON(baseurl)
+baseurl <- "https://analythium.github.io/covid-19"
+## last updated
+fromJSON(file.path(baseurl, "api", "v1"))$date
 ## this is the table that lists all the regions/countries
+x <- fromJSON(file.path(baseurl, "api", "v1", "regions"))
 str(x)
 ## use the 'slug' as ID
-Plot <- function(x, ...) {
+get_data <- function(i)
+    fromJSON(file.path(baseurl, "api", "v1", "regions", i))
+plot_series <- function(x, log_y=TRUE, ...) {
     plot(as.Date(x$observed$date),
         x$observed$confirmed,
         type="l", lwd=2,
         xlim=range(as.Date(c(x$observed$date,
         x$predicted$date))), ylim=c(1, max(x$predicted$upper)),
-        log="y", las=1,
+        log=if (log_y) "y" else "", las=1,
         main=x$region$location, xlab="Date", ylab="Confirmed")
     polygon(as.Date(c(x$predicted$date, rev(x$predicted$date))),
             c(x$predicted$lower, rev(x$predicted$upper)),
@@ -26,32 +29,83 @@ Plot <- function(x, ...) {
     invisible(x)
 }
 
-i <- "global-combined"
-z <- fromJSON(paste0(baseurl, i))
-Plot(z)
-
-i <- "canada-combined"
-z <- fromJSON(paste0(baseurl, i))
-Plot(z)
-
-i <- "canada-alberta"
-z <- fromJSON(paste0(baseurl, i))
-Plot(z)
-
-i <- "morocco"
-z <- fromJSON(paste0(baseurl, i))
-Plot(z)
-
-i <- "hungary"
-z <- fromJSON(paste0(baseurl, i))
-Plot(z)
-
+plot_series(get_data("global-combined"))
+plot_series(get_data("canada-combined"))
+plot_series(get_data("canada-alberta"), log_y=FALSE)
+plot_series(get_data("canada-alberta"), log_y=TRUE)
+plot_series(get_data("morocco"))
+plot_series(get_data("hungary"), log_y=FALSE)
+plot_series(get_data("hungary"), log_y=TRUE)
 ```
 
+Actual slope as the beginning of forecast
+
 ```{r}
-i <- "canada-combined"
-z <- fromJSON(paste0(baseurl, i))
-renderPlot({
-    Plot(z)
-})
+load(url(file.path(baseurl, "data", "covid-19.RData")))
+Slopes <- structure(numeric(length(clean)), names=names(clean))
+for (i in names(Slopes))
+    Slopes[i] <- clean[[i]]$predicted$mean[2L] / clean[[i]]$predicted$mean[1L]
+
+hist(Slopes)
+summary(Slopes)
+d <- data.frame(
+    days=sapply(clean, function(z) length(z$observed$confirmed)),
+        rate=Slopes)
+d[d$rate > 2,]
+
+clean[["us-west-virginia"]]$observed
+clean[["montenegro"]]$observed
+
+for (i in names(Slopes))
+    if (any(diff(clean[[i]]$observed$confirmed) < 0)) {
+        cat("\n\n-----", i)
+        print(diff(clean[[i]]$observed$confirmed))
+    }
+
+plot(rate ~ jitter(days), d[d$rate > 1.01 & d$days >= 14,])
+dc <- cut(d$days, c(0, 14, 42, Inf), labels=FALSE)
+dc[d$rate < 1.01] <- 0
+table(dc, d$rate>1.1)
+
+d[dc == 2 & d$rate > 1.01 & d$rate <=1.1,]
+
+
+plot(density(d$rate[dc==3]), col=4, xlim=range(d$rate[dc!=1]))
+lines(density(d$rate[dc==2]), col=2)
+legend("topright", lty=1, col=c(2,4), legend=c("days 15-42", "days >42"))
+```
+
+Look at differencing
+
+
+```{r}
+zz <- list()
+for (i in names(clean)) {
+    z <- clean[[i]]$observed$confirmed
+    rt <- pmax(1, z[-1L] / z[-length(z)])
+    tt <- seq_along(rt)
+#    zz[[i]] <- data.frame(day=tt, rate=rt)
+    tmp <- try(loess(rt ~ tt))
+    if (!inherits(tmp, "try-error")) {
+        zz[[i]] <- predict(tmp, tt)
+        
+    }
+}
+nn <- max(sapply(zz, length))
+M <- matrix(NA, nn, length(zz))
+for (i in 1:length(zz))
+    M[1:length(zz[[i]]),i] <- zz[[i]]
+colnames(M) <- names(zz)
+M <- M[,!grepl("-combined", names(zz))]
+
+plot(0, type="n", xlim=c(1, nn), ylim=c(1, 2))
+for (i in zz)
+    lines(i, col="#00000044")
+q <- apply(M, 1, quantile, c(0.25, 0.5, 0.75), na.rm=TRUE)
+lines(q[2,], col=2, lwd=2)
+polygon(c(seq_len(nn), rev(seq_len(nn))),
+    c(q[1,], rev(q[3,])), col="#ff000044", border="#ff000088")
+
+i <- "canada-british-columbia"
+lines(M[,i], col=4, lwd=2)
 ```
