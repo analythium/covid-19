@@ -347,7 +347,7 @@
             dataset.data.pop();
           });
           // update data
-          var maxValPred = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5);
+          var maxValPred = Math.min(Math.max(...yupper), Math.max(...ypred) * 3);
           var maxValObs = Math.max(...ts.observed.current);
           var maxVal = Math.max(maxValPred, maxValObs)
           chart.options.title.text = ts.region.location;
