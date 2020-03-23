@@ -208,7 +208,7 @@ cat(sprintf("\n\t* Time series model successfully fitted for %s regions of %s to
 #'
 #' Write JSON output into text files: this makes up the API:
 #' `_stats` is a temporary folder that contains the API to be deployed
-cat("OK\nWriting restults ... ")
+cat("\nWriting restults ... ")
 dir.create("_stats")
 dir.create("_stats/api")
 dir.create("_stats/api/v1")
