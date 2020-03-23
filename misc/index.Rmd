@@ -16,7 +16,7 @@ get_data <- function(i)
     fromJSON(file.path(baseurl, "api", "v1", "regions", i))
 plot_series <- function(x, log_y=TRUE, ...) {
     plot(as.Date(x$observed$date),
-        x$observed$confirmed,
+        x$observed$current,
         type="l", lwd=2,
         xlim=range(as.Date(c(x$observed$date,
         x$predicted$date))), ylim=c(1, max(x$predicted$upper)),
