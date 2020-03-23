@@ -502,14 +502,15 @@ for (j in biggies) {
 <li>calculate the current number of cases (confirmed - recovered - deaths),</li>
 <li>fit <a href="http://www.exponentialsmoothing.net/">exponential smoothing state space model (ETS)</a> to the cases time series,</li>
 <li>forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),</li>
-<li>return the raw data, observed time series, and tack transformed predictions as a list.</li>
+<li>we fit models on log transformed data where the predictions based on untransformed data were constant,</li>
+<li>return the raw data, observed time series, and predictions as a list.</li>
 </ul>
 <pre class="r"><code>predict_covid &lt;- function(k, m, use_log=FALSE) {
     z &lt;- blob[[k]]
     out &lt;- list(
         region=as.list(x[k,c(6,5,4,3)]),
         rawdata=as.list(blob[[k]]),
-        observed=NULL, predicted=NULL)
+        observed=NULL, predicted=NULL, transformation=NULL)
     if (sum(z$confirmed, na.rm=TRUE) == 0)
         return(out)
     day1 &lt;- min(which(diff(z$confirmed) &gt; 0)) + 1L
@@ -540,17 +541,27 @@ for (j in biggies) {
         mean=unclass(pm[,1]),
         lower=unclass(pm[,2]),
         upper=unclass(pm[,3]))
+    out$transformation &lt;- if (use_log)
+        &quot;logarithmic&quot; else &quot;identity&quot;
     out
 }
 cat(&quot;OK\nRunning analyses ... &quot;)
 clean &lt;- list()
 for (k in names(blob)) {
-    clean[[k]] &lt;- predict_covid(k=k, m=7, use_log=FALSE)
+    out &lt;- predict_covid(k=k, m=7, use_log=FALSE)
+    if (!is.null(out$predicted$mean)) {
+        Diff &lt;- diff(out$predicted$mean)
+        if (max(Diff) == 0)
+            out &lt;- predict_covid(k=k, m=7, use_log=TRUE)
+    }
+    clean[[k]] &lt;- out
 }
 cat(sprintf(&quot;OK\n\t* Results processed successfully for %s regions of %s total&quot;,
     sum(names(blob) %in% names(clean)), length(blob)))
 cat(sprintf(&quot;\n\t* Time series model successfully fitted for %s regions of %s total&quot;,
-    sum(sapply(clean, function(z) !is.null(z$observed))), length(blob)))</code></pre>
+    sum(sapply(clean, function(z) !is.null(z$observed))), length(blob)))
+cat(sprintf(&quot;\n\t* Logarithmic scale used for %s regions&quot;,
+    sum(sapply(clean, function(z) !is.null(z$transformation) &amp;&amp; z$transformation == &quot;logarithmic&quot;))))</code></pre>
 </div>
 <div id="saving-results" class="section level2">
 <h2>Saving results</h2>

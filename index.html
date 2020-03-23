@@ -347,7 +347,9 @@
             dataset.data.pop();
           });
           // update data
-          var maxVal = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5);
+          var maxValPred = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5);
+          var maxValObs = Math.max(...ts.observed.current);
+          var maxVal = Math.max(maxValPred, maxValObs)
           chart.options.title.text = ts.region.location;
           chart.options.scales.yAxes[0].ticks.max = maxVal;
           chart.data.labels = labels;
