@@ -156,13 +156,14 @@ for (j in biggies) {
 #' * calculate the current number of cases (confirmed - recovered - deaths),
 #' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the cases time series,
 #' * forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),
-#' * return the raw data, observed time series, and tack transformed predictions as a list.
+#' * we fit models on log transformed data where the predictions based on untransformed data were constant,
+#' * return the raw data, observed time series, and predictions as a list.
 predict_covid <- function(k, m, use_log=FALSE) {
     z <- blob[[k]]
     out <- list(
         region=as.list(x[k,c(6,5,4,3)]),
         rawdata=as.list(blob[[k]]),
-        observed=NULL, predicted=NULL)
+        observed=NULL, predicted=NULL, transformation=NULL)
     if (sum(z$confirmed, na.rm=TRUE) == 0)
         return(out)
     day1 <- min(which(diff(z$confirmed) > 0)) + 1L
@@ -193,17 +194,27 @@ predict_covid <- function(k, m, use_log=FALSE) {
         mean=unclass(pm[,1]),
         lower=unclass(pm[,2]),
         upper=unclass(pm[,3]))
+    out$transformation <- if (use_log)
+        "logarithmic" else "identity"
     out
 }
 cat("OK\nRunning analyses ... ")
 clean <- list()
 for (k in names(blob)) {
-    clean[[k]] <- predict_covid(k=k, m=7, use_log=FALSE)
+    out <- predict_covid(k=k, m=7, use_log=FALSE)
+    if (!is.null(out$predicted$mean)) {
+        Diff <- diff(out$predicted$mean)
+        if (max(Diff) == 0)
+            out <- predict_covid(k=k, m=7, use_log=TRUE)
+    }
+    clean[[k]] <- out
 }
 cat(sprintf("OK\n\t* Results processed successfully for %s regions of %s total",
     sum(names(blob) %in% names(clean)), length(blob)))
 cat(sprintf("\n\t* Time series model successfully fitted for %s regions of %s total",
     sum(sapply(clean, function(z) !is.null(z$observed))), length(blob)))
+cat(sprintf("\n\t* Logarithmic scale used for %s regions",
+    sum(sapply(clean, function(z) !is.null(z$transformation) && z$transformation == "logarithmic"))))
 #' ## Saving results
 #'
 #' Write JSON output into text files: this makes up the API:
