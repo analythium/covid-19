@@ -25,6 +25,7 @@
 #' for writing [JSON](https://www.json.org/) data,
 #' [**forecast**](https://CRAN.R-project.org/package=forecast)
 #' for forecasting time series
+cat("Loading packages ... ")
 suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(forecast))
 #' ## Data sources
@@ -42,6 +43,7 @@ suppressPackageStartupMessages(library(forecast))
 #' * daily confirmed cases (cumulative) by region,
 #' * daily deaths (cumulative) by region,
 #' * daily recovered cases (cumulative) by region.
+cat("OK\nPulling data ... ")
 baseurl <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
 x_c <- read.csv(paste0(baseurl, "time_series_19-covid-Confirmed.csv"),
     stringsAsFactors = FALSE)
@@ -52,6 +54,7 @@ x_r <- read.csv(paste0(baseurl, "time_series_19-covid-Recovered.csv"),
 #' ## Data processing
 #'
 #' We check consistency across the three tables
+cat("OK\nChecking data ... ")
 rownames(x_c) <- apply(x_c[,1:4], 1, paste, collapse="_")
 rownames(x_d) <- apply(x_c[,1:4], 1, paste, collapse="_")
 rownames(x_r) <- apply(x_c[,1:4], 1, paste, collapse="_")
@@ -62,6 +65,7 @@ stopifnot(all(rownames(x_d)==rownames(x_r)))
 stopifnot(all(rownames(x_d)==rownames(x_c)))
 stopifnot(all(rownames(x_r)==rownames(x_c)))
 #' Create a data frame describing the region attributes
+cat("OK\nCreating lookup ... ")
 x <- x_c[,1:4]
 stopifnot(all(
     colnames(x)==c("Province.State", "Country.Region", "Lat", "Long")))
@@ -92,6 +96,7 @@ colnames(x) <- c("province-state", "country-region", "latitude", "longitude")
 x$slug <- slug
 x$location <- loc
 #' Format the three matrices
+cat("OK\nCreating regional data sets ... ")
 x_c <- as.matrix(x_c[,cn])
 x_d <- as.matrix(x_d[,cn])
 x_r <- as.matrix(x_r[,cn])
@@ -108,6 +113,7 @@ for (i in slug) {
     blob[[i]] <- z
 }
 #' Tally up all the regions to make a Global combined data
+cat("OK\nMaking combined data sets ... ")
 z <- data.frame(prov="", country="Global, Combined",
     latitude=0,
     longitude=0,
@@ -130,7 +136,7 @@ for (j in biggies) {
     z <- data.frame(prov="", country=paste0(j, ", Combined"),
         latitude=mean(xx$latitude),
         longitude=mean(xx$longitude),
-        slug=paste0(tolower(j), "-combined"),
+        slug=paste0(tolower(gsub(" ", "-", j)), "-combined"),
         location=paste0(j, ", Combined"),
         stringsAsFactors = FALSE)
     colnames(z) <- colnames(x)
@@ -148,65 +154,73 @@ for (j in biggies) {
 #'
 #' * takes the time series of cases starting at the 1st day of infections at that location,
 #' * calculate the current number of cases (confirmed - recovered - deaths),
-#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the natural logarithm transformed cases time series,
+#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the cases time series,
 #' * forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),
 #' * return the raw data, observed time series, and tack transformed predictions as a list.
-predict_covid <- function(k, m) {
+predict_covid <- function(k, m, use_log=FALSE) {
     z <- blob[[k]]
+    out <- list(
+        region=as.list(x[k,c(6,5,4,3)]),
+        rawdata=as.list(blob[[k]]),
+        observed=NULL, predicted=NULL)
     if (sum(z$confirmed, na.rm=TRUE) == 0)
-        return(NULL)
+        return(out)
     day1 <- min(which(diff(z$confirmed) > 0)) + 1L
     z <- z[day1:nrow(z),,drop=FALSE]
     y <- pmax(0, z$confirmed - z$recovered - z$deaths)
     n <- length(y)
-    f <- ets(log(y))
-    p <- forecast(f, m)
-    pm <- exp(cbind(p$mean, p$lower[,2], p$upper[,2]))
+    if (use_log) {
+        tr <- function(x) log(x + 1)
+        itr <- function(x) exp(x) - 1
+    } else {
+        tr <- function(x) x
+        itr <- tr
+    }
+    f <- try(ets(tr(y)))
+    if (inherits(f, "try-error")) {
+        pm <- matrix(NA, m, 3)
+    } else {
+        p <- forecast(f, m)
+        pm <- itr(cbind(p$mean, p$lower[,2], p$upper[,2]))
+    }
     d <- z$date
-    out <- list(
-        region=as.list(x[k,c(6,5,4,3)]),
-        rawdata=as.list(blob[[k]]),
-        observed=list(
-            date=as.Date(z$date),
-            current=y
-        ),
-        predicted=list(
-            date=as.Date(
-                seq(d[length(d)]+1, d[length(d)]+m, 1)),
-            mean=unclass(pm[,1]),
-            lower=unclass(pm[,2]),
-            upper=unclass(pm[,3])
-        )
-    )
+    out$observed <- list(
+        date=as.Date(z$date),
+        current=y)
+    out$predicted <- list(
+        date=as.Date(
+            seq(d[length(d)]+1, d[length(d)]+m, 1)),
+        mean=unclass(pm[,1]),
+        lower=unclass(pm[,2]),
+        upper=unclass(pm[,3]))
     out
 }
+cat("OK\nRunning analyses ... ")
+clean <- list()
+for (k in names(blob)) {
+    clean[[k]] <- predict_covid(k=k, m=7, use_log=FALSE)
+}
+cat(sprintf("OK\n\t* Results processed successfully for %s regions of %s total",
+    sum(names(blob) %in% names(clean)), length(blob)))
+cat(sprintf("\n\t* Time series model successfully fitted for %s regions of %s total",
+    sum(sapply(clean, function(z) !is.null(z$observed))), length(blob)))
 #' ## Saving results
 #'
 #' Write JSON output into text files: this makes up the API:
 #' `_stats` is a temporary folder that contains the API to be deployed
+cat("OK\nWriting restults ... ")
 dir.create("_stats")
 dir.create("_stats/api")
 dir.create("_stats/api/v1")
 dir.create("_stats/api/v1/regions")
 #' Catch possible problems during model fitting (i.e. exclude
 #' regions with a single observation)
-OK <- rep(TRUE, nrow(x))
-names(OK) <- rownames(x)
-clean <- list()
-for (i in rownames(x)) {
-    out <- try(predict_covid(i, 7), silent = TRUE)
-    if (inherits(out, "try-error"))
-        out <- NULL
-    if (is.null(out)) {
-        OK[i] <- FALSE
-    } else {
-        dir.create(paste0("_stats/api/v1/regions/", i))
-        writeLines(toJSON(out),
-            paste0("_stats/api/v1/regions/", i, "/index.json"))
-        clean[[i]] <- out
-    }
+for (k in names(clean)) {
+    dir.create(paste0("_stats/api/v1/regions/", k))
+    writeLines(toJSON(clean[[k]]),
+        paste0("_stats/api/v1/regions/", k, "/index.json"))
 }
-writeLines(toJSON(x[OK,,drop=FALSE]), "_stats/api/v1/regions/index.json")
+writeLines(toJSON(x), "_stats/api/v1/regions/index.json")
 #' Save session info and last update date
 info <- list(date=Sys.time(), session=unclass(sessionInfo()))
 info$session <- lapply(info$session, function(z) lapply(z, unclass))
@@ -223,3 +237,4 @@ save(x, blob, clean, file="_stats/data/covid-19.RData")
 #' https://analythium.github.io/covid-19/api/v1/.
 #' [Travis CI](https://travis-ci.org/github/analythium/covid-19)
 #' is updating the API using a daily cron job.
+cat("OK\nDONE\n\n")
