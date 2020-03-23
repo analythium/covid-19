@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=UA-147215898-3"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-147215898-3");
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -21,6 +35,12 @@
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
           0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
       }
+
+      /* #lineChart {
+        background-color: rgb(233, 232, 232);
+        border-radius: 6px;
+        box-shadow: 4px 4px 4px 0 rgba(0, 0, 0, 0.1) !important;
+      } */
 
       /* typeahead styling */
       .typeahead,
@@ -166,7 +186,7 @@
           <div class="columns">
             <div class="column is-8 is-offset-2">
               <div style="width:100%;">
-                <canvas id="line-chart" width="800" height="600"></canvas>
+                <canvas id="lineChart" width="800" height="600"></canvas>
               </div>
             </div>
           </div>
@@ -176,13 +196,37 @@
               <div class="column is-8 is-offset-2">
                 <div class="content is-medium">
                   <p>
-                    Data shown here reflect the current number of cases (confirmed &ndash; recovered &ndash; deaths) by region. We analyzed the time series of current cases starting from the 1st day of confirmed cases in that region. We used exponential smoothing state space model to fit a time series model to the natural logarithm transformed data. We then forecast based on this models providing the point predictions and 95% confidence limits. This forecast is uncertain and might change based on new data. It is intended to show short term trend in the number of cases assuming all other factors affecting the number of cases, such as intervention measures, remain unchanged.
+                    Data shown here reflect the current number of cases
+                    (confirmed &ndash; recovered &ndash; deaths) by region. We
+                    analyzed the time series of current cases starting from the
+                    1st day of confirmed cases in that region. We used
+                    exponential smoothing state space model to fit a time series
+                    model to the natural logarithm transformed data. We then
+                    forecast based on this models providing the point
+                    predictions and 95% confidence limits. This forecast is
+                    uncertain and might change based on new data. It is intended
+                    to show short term trend in the number of cases assuming all
+                    other factors affecting the number of cases, such as
+                    intervention measures, remain unchanged.
                   </p>
                   <p>
-                    The Website relies upon publicly available and daily updated data from multiple sources as discribed on the <a href="https://github.com/CSSEGISandData/COVID-19" target="_blank">JHU CSSE</a> page. The data behind the plot can be accessed through an API descrined on the <a href="./methods/" target="_blank" >Methods</a> page.
+                    The Website relies upon publicly available and daily updated
+                    data from multiple sources as discribed on the
+                    <a
+                      href="https://github.com/CSSEGISandData/COVID-19"
+                      target="_blank"
+                      >JHU CSSE</a
+                    >
+                    page. The data behind the plot can be accessed through an
+                    API descrined on the
+                    <a href="./methods/" target="_blank">Methods</a> page.
                   </p>
                   <p>
-                    Analythium Solutions hereby disclaims any and all representations and warranties with respect to the Website, including accuracy, fitness for use, and merchantability. Reliance on the Website for medical guidance or use of the Website in commerce is strictly prohibited.
+                    Analythium Solutions hereby disclaims any and all
+                    representations and warranties with respect to the Website,
+                    including accuracy, fitness for use, and merchantability.
+                    Reliance on the Website for medical guidance or use of the
+                    Website in commerce is strictly prohibited.
                   </p>
                 </div>
               </div>
@@ -205,9 +249,8 @@
     <script type="text/javascript" src="./assets/charts.js"></script>
     <script>
       $(document).ready(function() {
-
-        const baseurl = "."
-        //const baseurl = "https://analythium.github.io/covid-19"
+        //const baseurl = ".";
+        const baseurl = "https://analythium.github.io/covid-19";
 
         $.getJSON(baseurl + "/api/v1/index.json", function(data) {
           $("#footer").html(
@@ -226,7 +269,7 @@
           menu.classList.toggle("is-active");
         });
 
-        var tsChart = new Chart(document.getElementById("line-chart"), {
+        var tsChart = new Chart(document.getElementById("lineChart"), {
           type: "line",
           data: {
             labels: [],
@@ -242,20 +285,20 @@
                 label: "Forecast",
                 borderColor: "#8e5ea2",
                 fill: false
-                },
-                {
-                 data: [],
-                 label: "2.5%",
-                 borderColor: "#8e5e80",
-                 borderWidth: 1,
-                 fill: false
-                },
-                {
-                 data: [],
-                   label: "97.5%",
-                   borderColor: "#8e5e80",
-                   borderWidth: 1,
-                   fill: false
+              },
+              {
+                data: [],
+                label: "2.5%",
+                borderColor: "#8e5e80",
+                borderWidth: 1,
+                fill: false
+              },
+              {
+                data: [],
+                label: "97.5%",
+                borderColor: "#8e5e80",
+                borderWidth: 1,
+                fill: false
               }
             ]
           },
@@ -271,7 +314,7 @@
                   type: "linear",
                   scaleLabel: {
                     display: true,
-                    labelString: 'Number of current cases'
+                    labelString: "Number of current cases"
                   },
                   ticks: {
                     min: 0,
@@ -304,7 +347,7 @@
             dataset.data.pop();
           });
           // update data
-          var maxVal = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5)
+          var maxVal = Math.min(Math.max(...yupper), Math.max(...ypred) * 1.5);
           chart.options.title.text = ts.region.location;
           chart.options.scales.yAxes[0].ticks.max = maxVal;
           chart.data.labels = labels;
@@ -316,12 +359,13 @@
         }
 
         // default plot
-        $.getJSON(baseurl + "/api/v1/regions/global-combined/index.json", function(
-          data
-        ) {
-          //plotTs(data);
-          updateTsChart(tsChart, data);
-        });
+        $.getJSON(
+          baseurl + "/api/v1/regions/global-combined/index.json",
+          function(data) {
+            //plotTs(data);
+            updateTsChart(tsChart, data);
+          }
+        );
 
         // get regions array
         $.getJSON(baseurl + "/api/v1/regions/index.json", function(data) {
@@ -379,7 +423,8 @@
             var OK = checkSpecies(species, spp);
             if (spp != "" && OK == true) {
               $.getJSON(
-                baseurl + "/api/v1/regions/" +
+                baseurl +
+                  "/api/v1/regions/" +
                   link[species.indexOf(spp)] +
                   "/index.json",
                 function(data) {
