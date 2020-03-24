@@ -45,11 +45,9 @@ suppressPackageStartupMessages(library(forecast))
 #' * daily recovered cases (cumulative) by region.
 cat("OK\nPulling data ... ")
 baseurl <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
-x_c <- read.csv(paste0(baseurl, "time_series_19-covid-Confirmed.csv"),
+x_c <- read.csv(paste0(baseurl, "time_series_covid19_confirmed_global.csv"),
     stringsAsFactors = FALSE)
-x_d <- read.csv(paste0(baseurl, "time_series_19-covid-Deaths.csv"),
-    stringsAsFactors = FALSE)
-x_r <- read.csv(paste0(baseurl, "time_series_19-covid-Recovered.csv"),
+x_d <- read.csv(paste0(baseurl, "time_series_covid19_deaths_global.csv"),
     stringsAsFactors = FALSE)
 #' ## Data processing
 #'
@@ -57,13 +55,8 @@ x_r <- read.csv(paste0(baseurl, "time_series_19-covid-Recovered.csv"),
 cat("OK\nChecking data ... ")
 rownames(x_c) <- apply(x_c[,1:4], 1, paste, collapse="_")
 rownames(x_d) <- apply(x_c[,1:4], 1, paste, collapse="_")
-rownames(x_r) <- apply(x_c[,1:4], 1, paste, collapse="_")
-stopifnot(all(colnames(x_d)==colnames(x_r)))
 stopifnot(all(colnames(x_d)==colnames(x_c)))
-stopifnot(all(colnames(x_r)==colnames(x_c)))
-stopifnot(all(rownames(x_d)==rownames(x_r)))
 stopifnot(all(rownames(x_d)==rownames(x_c)))
-stopifnot(all(rownames(x_r)==rownames(x_c)))
 #' Create a data frame describing the region attributes
 cat("OK\nCreating lookup ... ")
 x <- x_c[,1:4]
@@ -99,16 +92,14 @@ x$location <- loc
 cat("OK\nCreating regional data sets ... ")
 x_c <- as.matrix(x_c[,cn])
 x_d <- as.matrix(x_d[,cn])
-x_r <- as.matrix(x_r[,cn])
-rownames(x) <- rownames(x_c) <- rownames(x_d) <- rownames(x_r) <- slug
-colnames(x_c) <- colnames(x_d) <- colnames(x_r) <- as.character(d)
+rownames(x) <- rownames(x_c) <- rownames(x_d) <- slug
+colnames(x_c) <- colnames(x_d) <- as.character(d)
 #' Make a list of region specific data sets combining the 3 matrices
 blob <- list()
 for (i in slug) {
     z <- data.frame(date=as.Date(d),
         confirmed=x_c[i,],
-        deaths=x_d[i,],
-        recovered=x_r[i,])
+        deaths=x_d[i,])
     rownames(z) <- NULL
     blob[[i]] <- z
 }
@@ -120,13 +111,12 @@ z <- data.frame(prov="", country="Global, Combined",
     slug="global-combined",
     location="Global, Combined",
     stringsAsFactors = FALSE)
-    colnames(z) <- colnames(x)
-    rownames(z) <- z$slug
+colnames(z) <- colnames(x)
+rownames(z) <- z$slug
 x <- rbind(x, z)
 zz <- data.frame(date=as.Date(d),
     confirmed=colSums(x_c),
-    deaths=colSums(x_d),
-    recovered=colSums(x_r))
+    deaths=colSums(x_d))
 rownames(zz) <- NULL
 blob[[z$slug]] <- zz
 #' Combine Countries/Regions with multiple Province/State entries
@@ -144,7 +134,7 @@ for (j in biggies) {
     x <- rbind(x, z)
     zz <- blob[[rownames(xx)[1]]]
     for (k in rownames(xx)[-1]) {
-        zz[,2:4] <- zz[,2:4] + blob[[k]][,2:4]
+        zz[,2:3] <- zz[,2:3] + blob[[k]][,2:3]
     }
     blob[[z$slug]] <- zz
 }
@@ -153,8 +143,7 @@ for (j in biggies) {
 #' Define a function that:
 #'
 #' * takes the time series of cases starting at the 1st day of infections at that location,
-#' * calculate the current number of cases (confirmed - recovered - deaths),
-#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the cases time series,
+#' * fit [exponential smoothing state space model (ETS)](http://www.exponentialsmoothing.net/) to the confirmed cases time series,
 #' * forecast the model for 14 days, mean prediction and lower/upper confidence intervals (95% nominal coverage),
 #' * we fit models on log transformed data where the predictions based on untransformed data were constant,
 #' * return the raw data, observed time series, and predictions as a list.
@@ -168,7 +157,7 @@ predict_covid <- function(k, m, use_log=FALSE) {
         return(out)
     day1 <- min(which(diff(z$confirmed) > 0)) + 1L
     z <- z[day1:nrow(z),,drop=FALSE]
-    y <- pmax(0, z$confirmed - z$recovered - z$deaths)
+    y <- z$confirmed
     n <- length(y)
     if (use_log) {
         tr <- function(x) log(x + 1)
@@ -187,7 +176,7 @@ predict_covid <- function(k, m, use_log=FALSE) {
     d <- z$date
     out$observed <- list(
         date=as.Date(z$date),
-        current=y)
+        confirmed=y)
     out$predicted <- list(
         date=as.Date(
             seq(d[length(d)]+1, d[length(d)]+m, 1)),

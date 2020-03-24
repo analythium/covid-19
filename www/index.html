@@ -196,9 +196,9 @@
               <div class="column is-8 is-offset-2">
                 <div class="content is-medium">
                   <p>
-                    Data shown here reflect the current number of cases
+                    Data shown here reflect the number of confirmed cases
                     (confirmed &ndash; recovered &ndash; deaths) by region. We
-                    analyzed the time series of current cases starting from the
+                    analyzed the time series of cases starting from the
                     1st day of confirmed cases in that region. We used
                     exponential smoothing state space model to fit a time series
                     model to the natural logarithm transformed data. We then
@@ -276,7 +276,7 @@
             datasets: [
               {
                 data: [],
-                label: "Current cases",
+                label: "Confirmed cases",
                 borderColor: "#3e95cd",
                 fill: true
               },
@@ -314,7 +314,7 @@
                   type: "linear",
                   scaleLabel: {
                     display: true,
-                    labelString: "Number of current cases"
+                    labelString: "Number of confirmed cases"
                   },
                   ticks: {
                     min: 0,
@@ -329,11 +329,11 @@
         function updateTsChart(chart, ts) {
           // get relevant pieces from ts object
           var labels = ts.observed.date.concat(ts.predicted.date);
-          var yobs = ts.observed.current;
+          var yobs = ts.observed.confirmed;
           var ypred = ts.predicted.mean;
           var ylower = ts.predicted.lower;
           var yupper = ts.predicted.upper;
-          for (var i = 0; i < ts.observed.current.length; i++) {
+          for (var i = 0; i < ts.observed.confirmed.length; i++) {
             ypred.unshift(null);
             ylower.unshift(null);
             yupper.unshift(null);
@@ -348,7 +348,7 @@
           });
           // update data
           var maxValPred = Math.min(Math.max(...yupper), Math.max(...ypred) * 3);
-          var maxValObs = Math.max(...ts.observed.current);
+          var maxValObs = Math.max(...ts.observed.confirmed);
           var maxVal = Math.max(maxValPred, maxValObs)
           chart.options.title.text = ts.region.location;
           chart.options.scales.yAxes[0].ticks.max = maxVal;
