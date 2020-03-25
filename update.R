@@ -190,11 +190,11 @@ predict_covid <- function(k, m, use_log=FALSE) {
 cat("OK\nRunning analyses ... ")
 clean <- list()
 for (k in names(blob)) {
-    out <- predict_covid(k=k, m=7, use_log=FALSE)
+    out <- predict_covid(k=k, m=7, use_log=TRUE)
     if (!is.null(out$predicted$mean)) {
         Diff <- diff(out$predicted$mean)
         if (max(Diff) == 0)
-            out <- predict_covid(k=k, m=7, use_log=TRUE)
+            out <- predict_covid(k=k, m=7, use_log=FALSE)
     }
     clean[[k]] <- out
 }
