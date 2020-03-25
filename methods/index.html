@@ -537,11 +537,11 @@ for (j in biggies) {
 cat(&quot;OK\nRunning analyses ... &quot;)
 clean &lt;- list()
 for (k in names(blob)) {
-    out &lt;- predict_covid(k=k, m=7, use_log=FALSE)
+    out &lt;- predict_covid(k=k, m=7, use_log=TRUE)
     if (!is.null(out$predicted$mean)) {
         Diff &lt;- diff(out$predicted$mean)
         if (max(Diff) == 0)
-            out &lt;- predict_covid(k=k, m=7, use_log=TRUE)
+            out &lt;- predict_covid(k=k, m=7, use_log=FALSE)
     }
     clean[[k]] &lt;- out
 }
