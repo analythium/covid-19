@@ -53,8 +53,12 @@ x_d <- read.csv(paste0(baseurl, "time_series_covid19_deaths_global.csv"),
 #'
 #' We check consistency across the three tables
 cat("OK\nChecking data ... ")
-rownames(x_c) <- apply(x_c[,1:4], 1, paste, collapse="_")
-rownames(x_d) <- apply(x_c[,1:4], 1, paste, collapse="_")
+rownames(x_c) <- sapply(seq_len(nrow(x_c)), function(i) paste0(x_c[i,1:4], collapse="_"))
+rownames(x_d) <- sapply(seq_len(nrow(x_d)), function(i) paste0(x_d[i,1:4], collapse="_"))
+setdiff(colnames(x_d), colnames(x_c))
+setdiff(colnames(x_c), colnames(x_d))
+setdiff(rownames(x_d), rownames(x_c))
+setdiff(rownames(x_c), rownames(x_d))
 stopifnot(all(colnames(x_d)==colnames(x_c)))
 stopifnot(all(rownames(x_d)==rownames(x_c)))
 #' Create a data frame describing the region attributes
