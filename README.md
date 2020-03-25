@@ -18,3 +18,5 @@ https://analythium.github.io/covid-19/api/v1/
 
 Travis CI is updating the API using a daily cron job:
 https://travis-ci.org/github/analythium/covid-19
+
+We also scrape the Alberta COVID-19 report: https://covid19stats.alberta.ca/
