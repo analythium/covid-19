@@ -1,20 +1,25 @@
 ## scrape Alberta stats reports
 
-library(xml2)
-library(rvest)
-library(jsonlite)
+cat("Loading packages ... ")
+suppressPackageStartupMessages(library(jsonlite))
+suppressPackageStartupMessages(library(xml2))
+suppressPackageStartupMessages(library(rvest))
 
+cat("OK\nGetting & parsing html ... ")
 url <- "https://covid19stats.alberta.ca/"
-
 h <- read_html(url)
 n <- html_nodes(h, 'script')
 n <- n[grep("htmlwidget-", n)]
 txt <- html_text(n)
 json <- lapply(txt, fromJSON)
+n2 <- html_nodes(h, 'table')
+tab <- html_table(n2)
 out <- list()
+out$source <- list(url=url, time=Sys.time())
 
 ## Figure 1
 ## Cumulative COVID-19 cases in Alberta by day
+cat("OK\nScraping Fig 1 ... ")
 x <- json[[1L]]
 out$cumulative <- list(
     xlab=x$x$layout$xaxis$title,
@@ -25,6 +30,7 @@ out$cumulative <- list(
 ## Figure 2
 ## Cumulative COVID-19 cases in Alberta by route of suspected acquisition
 ## Only includes COVID-19 cases where case report forms have been received
+cat("OK\nScraping Fig 2 ... ")
 x <- json[[2L]]
 out$routes <- list(
     xlab=x$x$layout$xaxis$title,
@@ -35,6 +41,7 @@ out$routes <- list(
 
 ## Figure 3
 ## COVID-19 cases in Alberta by day
+cat("OK\nScraping Fig 3 ... ")
 x <- json[[3L]]
 out$reported <- list(
     xlab=x$x$layout$xaxis$title,
@@ -47,6 +54,7 @@ out$reported <- list(
 
 ## Figure 5
 ## COVID-19 cases in Alberta by date reported to Alberta Health
+cat("OK\nScraping Fig 5 ... ")
 x <- json[[4L]]
 out$zones <- list(
     xlab=x$x$layout$xaxis$title,
@@ -56,7 +64,7 @@ out$zones <- list(
     name=x$x$data$name)
 
 ## Map
-## COVID-19 cases in Alberta by date reported to Alberta Health
+cat("OK\nScraping map ... ")
 x <- json[[5L]]$x$calls$args[[2L]][[7L]]
 x <- gsub("<strong>", "", x)
 x <- gsub("</strong>", "", x)
@@ -64,8 +72,9 @@ x <- gsub(" case(s)", "", x, fixed=TRUE)
 x <- strsplit(x, "<br/>")
 out$areas <- list(area=sapply(x, "[[", 1L), cases=as.integer(sapply(x, "[[", 2L)))
 
-## Figure 5
-## COVID-19 cases in Alberta by date reported to Alberta Health
+## Figure 6
+## People tested for COVID-19 in Alberta by day
+cat("OK\nScraping Fig 6 ... ")
 x <- json[[6L]]
 out$tested <- list(
     xlab=x$x$layout$xaxis$title,
@@ -73,9 +82,33 @@ out$tested <- list(
     x=x$x$data$x,
     y=x$x$data$y,
     name=x$x$data$name)
-out$source <- list(url=url, time=Sys.time())
+
+## Table 1
+## COVID-19 cases in Alberta by zone
+cat("OK\nScraping Table 1 ... ")
+out$tablebyzone <- tab[[1L]]
+
+## Table 2
+## COVID-19 testing in Alberta
+cat("OK\nScraping Table 2 ... ")
+x <- tab[[2L]]
+colnames(x)[1L] <- "Variable"
+x[,2L] <- gsub(",", "", x[,2L])
+x[,2L] <- as.integer(x[,2L])
+out$testingtotal <- x
+
+## Table 3
+## Number of people tested for COVID-19 in Alberta by zone
+cat("OK\nScraping Table 3 ... ")
+x <- tab[[3L]]
+x[,2L] <- gsub(",", "", x[,2L])
+x[,2L] <- as.integer(x[,2L])
+x[,3L] <- gsub(",", "", x[,3L])
+x[,3L] <- as.integer(x[,3L])
+out$testingbyzone <- x
 
 ## write json
+cat("OK\nWriting results ... ")
 dir.create("_stats/api/v1/data")
 dir.create("_stats/api/v1/data/canada")
 dir.create("_stats/api/v1/data/canada/alberta")
@@ -84,3 +117,4 @@ writeLines(toJSON(out), "_stats/api/v1/data/canada/alberta/latest/index.json")
 writeLines(toJSON(out), paste0("_stats/api/v1/data/canada/alberta/",
     as.Date(Sys.time()), ".json"))
 save(out, file="_stats/data/covid-19-canada-alberta.RData")
+cat("OK\nDONE\n\n")
