@@ -113,8 +113,9 @@ dir.create("_stats/api/v1/data")
 dir.create("_stats/api/v1/data/canada")
 dir.create("_stats/api/v1/data/canada/alberta")
 dir.create("_stats/api/v1/data/canada/alberta/latest")
-writeLines(toJSON(out), "_stats/api/v1/data/canada/alberta/latest/index.json")
-writeLines(toJSON(out), paste0("_stats/api/v1/data/canada/alberta/",
-    as.Date(Sys.time()), ".json"))
+writeLines(toJSON(out, auto_unbox = TRUE),
+    "_stats/api/v1/data/canada/alberta/latest/index.json")
+writeLines(toJSON(out, auto_unbox = TRUE),
+    paste0("_stats/api/v1/data/canada/alberta/", as.Date(Sys.time()), ".json"))
 save(out, file="_stats/data/covid-19-canada-alberta.RData")
 cat("OK\nDONE\n\n")
