@@ -402,10 +402,10 @@ x_d &lt;- read.csv(paste0(baseurl, &quot;time_series_covid19_deaths_global.csv&q
 <pre class="r"><code>cat(&quot;OK\nChecking data ... &quot;)
 rownames(x_c) &lt;- sapply(seq_len(nrow(x_c)), function(i) paste0(x_c[i,1:4], collapse=&quot;_&quot;))
 rownames(x_d) &lt;- sapply(seq_len(nrow(x_d)), function(i) paste0(x_d[i,1:4], collapse=&quot;_&quot;))
-setdiff(colnames(x_d), colnames(x_c))
-setdiff(colnames(x_c), colnames(x_d))
-setdiff(rownames(x_d), rownames(x_c))
-setdiff(rownames(x_c), rownames(x_d))
+#setdiff(colnames(x_d), colnames(x_c))
+#setdiff(colnames(x_c), colnames(x_d))
+#setdiff(rownames(x_d), rownames(x_c))
+#setdiff(rownames(x_c), rownames(x_d))
 stopifnot(all(colnames(x_d)==colnames(x_c)))
 stopifnot(all(rownames(x_d)==rownames(x_c)))</code></pre>
 <p>Create a data frame describing the region attributes</p>
