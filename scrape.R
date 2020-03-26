@@ -86,10 +86,6 @@ if (FALSE) {
     proj4string(l) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
     #g@data <- data.frame(area=sapply(x, "[[", 1L))
     toGeoJSON(l, "data/alberta-areas")
-    tmp <- readLines("data/alberta-areas.geojson") # minify
-    tmp <- gsub(" ", "", tmp)
-    tmp <- paste0(tmp, collapse="")
-    writeLines(tmp, "data/alberta-areas.geojson")
     tmp <- readOGR("data/alberta-areas.geojson")
 }
 ## Figure 6
