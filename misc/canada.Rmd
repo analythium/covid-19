@@ -1,0 +1,91 @@
+---
+title: "Exploring COVID-19 Canada"
+output: html_document
+---
+
+```{r include=FALSE}
+library(jsonlite)
+library(ggplot2)
+library(plotly)
+knitr::opts_chunk$set(echo=FALSE,message=FALSE,warning=FALSE)
+
+baseurl <- "https://analythium.github.io/covid-19"
+load(url(file.path(baseurl, "data", "covid-19.RData")))
+load(url(file.path(baseurl, "data", "covid-19-canada-alberta.RData")))
+get_cases1 <- function(i) {
+    z <- clean[[i]]
+    y <-z$observed$confirmed 
+    out <- data.frame(x=seq_along(y) - 1L, y=y)
+    out$Region <- x[i, "location"]
+    out$Date <- as.Date(z$observed$date)
+    out
+}
+get_cases <- function(i) {
+    do.call(rbind, lapply(i, get_cases1))
+}
+COUNTRIES <- get_cases(c("global-combined",
+    "italy", "japan", 
+    "canada-combined", "germany"))
+COUNTRIES$Region <- gsub(", Combined", "", COUNTRIES$Region)
+CANADA <- get_cases(c("canada-british-columbia", "canada-alberta", 
+    "canada-saskatchewan", "canada-manitoba", 
+    "canada-ontario", "canada-quebec",
+    "canada-new-brunswick", "canada-newfoundland-and-labrador", 
+    "canada-nova-scotia", "canada-prince-edward-island"))
+CANADA$Region <- gsub("Canada/", "", CANADA$Region)
+ALBERTA <- do.call(rbind, lapply(1:5, function(i) {
+    y <- cumsum(out$zones$y[[i]])
+    o <- data.frame(x=seq_along(y) - 1L, y=y)
+    o$Region <- out$zones$name[i]
+    o$Date <- as.Date(out$zones$x[[i]])
+    o
+}))
+ALBERTA$Zone <- gsub(" Zone", "", ALBERTA$Region)
+```
+
+```{r}
+p1 <- ggplot(data=COUNTRIES, aes(Date, y, group=Region)) + 
+    geom_line(aes(color=Region)) +
+    labs(title="COVID-19 cases globally") +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases") #+ geom_smooth(aes(color=Region))
+ggplotly(p1)
+```
+
+```{r}
+p2 <- ggplot(data=CANADA[CANADA$Date >= as.Date("2020-03-01"),], 
+            aes(Date, y, group=Region)) + 
+    labs(title="Provinces/territories in Canada") +
+    geom_line(aes(color=Region)) +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases") #+ geom_smooth(aes(color=Region))
+ggplotly(p2)
+```
+
+```{r}
+p3 <- ggplot(data=ALBERTA, 
+            aes(Date, y, group=Zone)) + 
+    geom_point(aes(color=Zone)) +
+    labs(title="Alberta zones") +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases") + 
+    geom_smooth(aes(color=Zone))
+ggplotly(p3)
+```
+
+```{r}
+yy <- out$routes$y[[1]] + out$routes$y[[2]] + out$routes$y[[3]]
+comp <- data.frame(x=as.Date(out$routes$x[[1]]),
+    y=100*c(out$routes$y[[1]]/yy, out$routes$y[[2]]/yy, out$routes$y[[3]]/yy),
+    Route=rep(out$routes$name, each=length(yy)))
+p4 <- ggplot(comp, aes(x=x, y=y, fill=Route)) + 
+    geom_area() +
+    labs(title="Route of suspected acquisition in Alberta") +
+    xlab("Date") +
+    ylab("% of cases")
+ggplotly(p4)
+
+```
