@@ -11,7 +11,7 @@
 
 <meta name="author" content />
 
-<meta name="date" content="2020-03-25" />
+<meta name="date" content="2020-03-26" />
 
 <title>COVID-19 Analysis Methods</title>
 
@@ -364,7 +364,7 @@ summary {
 
 
 <h1 class="title toc-ignore">COVID-19 Analysis Methods</h1>
-<h4 class="date">2020-03-25</h4>
+<h4 class="date">2020-03-26</h4>
 
 </div>
 
@@ -443,6 +443,31 @@ x_c &lt;- as.matrix(x_c[,cn])
 x_d &lt;- as.matrix(x_d[,cn])
 rownames(x) &lt;- rownames(x_c) &lt;- rownames(x_d) &lt;- slug
 colnames(x_c) &lt;- colnames(x_d) &lt;- as.character(d)</code></pre>
+<p>Check for negative values</p>
+<pre class="r"><code>for (i in seq_len(nrow(x_c))) {
+    v &lt;- sort(which(x_c[i,] &lt; 0))
+    if (length(v)) {
+        for (ii in v) {
+            if (ii == 1L) {
+                x_c[i,ii] &lt;- 0
+            } else {
+                x_c[i,ii] &lt;- x_c[i,ii-1L]
+            }
+        }
+    }
+    v &lt;- sort(which(x_d[i,] &lt; 0))
+    if (length(v)) {
+        for (ii in v) {
+            if (ii == 1L) {
+                x_d[i,ii] &lt;- 0
+            } else {
+                x_d[i,ii] &lt;- x_d[i,ii-1L]
+            }
+        }
+    }
+}
+stopifnot(all(x_c &gt;= 0))
+stopifnot(all(x_d &gt;= 0))</code></pre>
 <p>Make a list of region specific data sets combining the 3 matrices</p>
 <pre class="r"><code>blob &lt;- list()
 for (i in slug) {
