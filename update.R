@@ -98,6 +98,31 @@ x_c <- as.matrix(x_c[,cn])
 x_d <- as.matrix(x_d[,cn])
 rownames(x) <- rownames(x_c) <- rownames(x_d) <- slug
 colnames(x_c) <- colnames(x_d) <- as.character(d)
+#' Check for negative values
+for (i in seq_len(nrow(x_c))) {
+    v <- sort(which(x_c[i,] < 0))
+    if (length(v)) {
+        for (ii in v) {
+            if (ii == 1L) {
+                x_c[i,ii] <- 0
+            } else {
+                x_c[i,ii] <- x_c[i,ii-1L]
+            }
+        }
+    }
+    v <- sort(which(x_d[i,] < 0))
+    if (length(v)) {
+        for (ii in v) {
+            if (ii == 1L) {
+                x_d[i,ii] <- 0
+            } else {
+                x_d[i,ii] <- x_d[i,ii-1L]
+            }
+        }
+    }
+}
+stopifnot(all(x_c >= 0))
+stopifnot(all(x_d >= 0))
 #' Make a list of region specific data sets combining the 3 matrices
 blob <- list()
 for (i in slug) {
