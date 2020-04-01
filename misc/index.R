@@ -330,32 +330,184 @@ plot(100*diff(Total_confirmed)/Total_confirmed[-n] ~ Date[-1], x,
     ylab="Daily % change", type="l")
 
 
+## ----- AB data
+library(forecast)
+s <- read.csv("./data/covid-19-canada-alberta.csv")
+#y <- s$Total_confirmed - s$Total_deaths - s$Total_recovered
+y <- s$Total_confirmed
+i <- 1 # start date
+j <- 14 # end date
+k <- 14 # forecast
+
+fit_ts <- function(y, i, j, method="ets", log=FALSE, k=1) {
+  method <- match.arg(method, c("ets", "arima", "lm", "sq"))
+  yy <- y[i:j]
+  x <- (j+1):(j+k)
+  if (log)
+    yy <- log(yy)
+  if (method %in% c("lm", "sq")) {
+    xx <- i:j
+    xx2 <- xx^2
+    m <- if (method == "lm")
+      lm(yy ~ xx) else lm(yy ~ xx + xx2)
+    p <- predict(m, data.frame(xx=x, xx2=x^2), interval="prediction")
+    fit <- p[,"fit"]
+    lwr <- p[,"lwr"]
+    upr <- p[,"upr"]
+  } else {
+    m <- if (method == "ets")
+      ets(yy) else auto.arima(yy)
+    p <- forecast(m, k)
+    fit <- p$mean
+    lwr <- p$lower[,"95%"]
+    upr <- p$upper[,"95%"]
+  }
+  if (log) {
+    fit <- exp(fit)
+    lwr <- exp(lwr)
+    upr <- exp(upr)
+  }
+  out <- list(i=i, j=j, k=k, method=method, y=y, x=x, obs=y[x],
+    fit=as.numeric(fit), lwr=as.numeric(lwr), upr=as.numeric(upr))
+  class(out) <- "fit_ts"
+  out
+}
+plot.fit_ts <- function(x, m=1.25, ...) {
+  plot(x$y, ylim=c(0, m*max(x$y)), xlim=c(1, m*length(x$y)),
+    type="l", col="grey", lty=2, lwd=2,
+    xlab="days", ylab="cases", ...)
+  if (x$k < 2) {
+    lines(c(x$x, x$x), c(x$lwr, x$upr), col="#ff000044")
+    points(x$x, x$obs, col=1, pch=19)
+    points(x$x, x$fit, col=2, pch=19)
+  } else {
+    polygon(c(x$x, rev(x$x)),
+      c(x$lwr, rev(x$upr)),
+      col="#ff000044", border="#ff000044")
+    lines(x$x, x$obs, col=1, lwd=2)
+    lines(x$x, x$fit, col=2, lwd=2)
+  }
+  invisible(x)
+}
+
+fit_ts(y, 1, 20, "ets", log=FALSE)
+fit_ts(y, 1, 20, "ets", log=TRUE)
+fit_ts(y, 15, 20, "lm", log=FALSE)
+fit_ts(y, 15, 20, "lm", log=TRUE)
+fit_ts(y, 1, 20, "sq", log=FALSE)
+fit_ts(y, 1, 20, "sq", log=TRUE)
+fit_ts(y, 1, 20, "arima", log=FALSE)
+fit_ts(y, 1, 20, "arima", log=TRUE)
+
+plot(fit_ts(y, 1, 20, "ar", log=FALSE, k=3), 2)
+
+eval_ts1 <- function(y, ...) {
+  x <- fit_ts(y, ..., k=1)
+  c(obs=x$obs, fit=x$fit, lwr=x$lwr, upr=x$upr,
+    bias=(x$obs - x$fit), sq=(x$obs - x$fit)^2,
+    int=(x$upr-x$lwr),
+    inside=as.integer(x$upr >= x$obs && x$lwr <= x$obs))
+}
+eval_ts1(y, 1, 20, "ets", log=FALSE)
+eval_ts <- function(y, ..., w=NULL) {
+  res <- list()
+  for (j in 2:(length(y)-1L)) {
+    i <- if (is.null(w))
+      1L else max(1L, j-w-1L)
+    res[[length(res)+1L]] <- c(i=i, j=j, eval_ts1(y, ..., i=i, j=j))
+  }
+  data.frame(do.call(rbind, res))
+}
+eval_ts(y, method="sq", w=4)
+eval_all <- function(y) {
+  suppressWarnings({
+    res <- list(
+      ets=eval_ts(y, method="ets", log=FALSE, w=NULL)[-(1:2),],
+      ar=eval_ts(y, method="arima", log=FALSE, w=NULL)[-(1:2),],
+      lm3=eval_ts(y, method="lm", log=FALSE, w=3)[-(1:2),],
+      lm4=eval_ts(y, method="lm", log=FALSE, w=4)[-(1:2),],
+      lm5=eval_ts(y, method="lm", log=FALSE, w=5)[-(1:2),],
+      lm6=eval_ts(y, method="lm", log=FALSE, w=6)[-(1:2),],
+      lm7=eval_ts(y, method="lm", log=FALSE, w=7)[-(1:2),],
+      sq4=eval_ts(y, method="sq", log=FALSE, w=4)[-(1:2),],
+      sq5=eval_ts(y, method="sq", log=FALSE, w=5)[-(1:2),],
+      sq6=eval_ts(y, method="sq", log=FALSE, w=6)[-(1:2),],
+      sq7=eval_ts(y, method="sq", log=FALSE, w=7)[-(1:2),],
+      sq8=eval_ts(y, method="sq", log=FALSE, w=8)[-(1:2),],
+      sq9=eval_ts(y, method="sq", log=FALSE, w=9)[-(1:2),],
+      sq10=eval_ts(y, method="sq", log=FALSE, w=10)[-(1:2),],
+      logets=eval_ts(y, method="ets", log=TRUE, w=NULL)[-(1:2),],
+      logar=eval_ts(y, method="arima", log=TRUE, w=NULL)[-(1:2),],
+      loglm3=eval_ts(y, method="lm", log=TRUE, w=3)[-(1:2),],
+      loglm4=eval_ts(y, method="lm", log=TRUE, w=4)[-(1:2),],
+      loglm5=eval_ts(y, method="lm", log=TRUE, w=5)[-(1:2),],
+      loglm6=eval_ts(y, method="lm", log=TRUE, w=6)[-(1:2),],
+      loglm7=eval_ts(y, method="lm", log=TRUE, w=7)[-(1:2),],
+      logsq4=eval_ts(y, method="sq", log=TRUE, w=4)[-(1:2),],
+      logsq5=eval_ts(y, method="sq", log=TRUE, w=5)[-(1:2),],
+      logsq6=eval_ts(y, method="sq", log=TRUE, w=6)[-(1:2),],
+      logsq7=eval_ts(y, method="sq", log=TRUE, w=7)[-(1:2),],
+      logsq8=eval_ts(y, method="sq", log=TRUE, w=8)[-(1:2),],
+      logsq9=eval_ts(y, method="sq", log=TRUE, w=9)[-(1:2),],
+      logsq10=eval_ts(y, method="sq", log=TRUE, w=10)[-(1:2),]
+    )
+  })
+  list(results=res, summary=t(sapply(res, colMeans))[,-(1:6)])
+}
+e <- eval_all(y)
+e$summary
+
+v <- e$results$ar
+v <- e$results$logsq6
+
+plot(v$obs, v$fit, type="n", xlab="observed", ylab="fitted")
+polygon(c(v$obs, rev(v$obs)), c(v$lwr, rev(v$upr)), border="grey", col="grey")
+abline(0,1,lty=2)
+lines(v$obs, v$fit)
 
 
-# Cumulative COVID-19 cases in Alberta by day
-jsonlite::fromJSON('{"x":{"visdat":{"481c3e586c13":["function () ","plotlyVisDat"]},"cur_data":"481c3e586c13","attrs":{"481c3e586c13":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":{},"y":{},"type":"scatter","mode":"lines","line":{"color":"#d40072"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"type":"date","tickformat":"%d %b","title":"Date Reported to Alberta Health","tickangle":90,"nticks":5},"yaxis":{"domain":[0,1],"automargin":true,"title":"Cumulative COVID-19 cases (n)"},"hovermode":"closest","showlegend":false},"source":"A","config":{"showSendToCloud":false},"data":[{"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,2,5,6,12,20,22,32,51,62,88,106,119],"type":"scatter","mode":"lines","line":{"color":"#d40072"},"marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}')
+library(jsonlite)
 
-# COVID-19 cases in Alberta by day
-'{"x":{"visdat":{"481c68321227":["function () ","plotlyVisDat"]},"cur_data":"481c68321227","attrs":{"481c68321227":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":{},"y":{},"type":"bar","marker":{"color":"#00aad2"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"barmode":"stack","xaxis":{"domain":[0,1],"automargin":true,"type":"date","tickformat":"%d %b","title":"Date Reported to Alberta Health","tickangle":90},"yaxis":{"domain":[0,1],"automargin":true,"title":"COVID-19 cases (n)"},"hovermode":"closest","showlegend":false},"source":"A","config":{"showSendToCloud":false},"data":[{"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,1,3,1,6,8,2,10,19,11,26,18,13],"type":"bar","marker":{"color":"#00aad2","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}'
+baseurl <- "https://analythium.github.io/covid-19"
+load(url(file.path(baseurl, "data", "covid-19.RData")))
+load(url(file.path(baseurl, "data", "covid-19-canada-alberta.RData")))
 
-# COVID-19 cases in Alberta by date reported to Alberta Health
-'{"x":{"visdat":{"481c74491916":["function () ","plotlyVisDat"]},"cur_data":"481c74491916","attrs":{"481c74491916":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":{},"y":{},"type":"bar","color":{},"colors":["#d40072","#00aad2","#5f6a72","#77b800","#ff7900","#edb700"],"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"barmode":"stack","legend":{"orientation":"h","xanchor":"center","x":0.5,"yanchor":"top","y":1},"xaxis":{"domain":[0,1],"automargin":true,"type":"date","tickformat":"%d %b","title":"Date reported to Alberta Health","tickangle":90},"yaxis":{"domain":[0,1],"automargin":true,"title":"COVID-19 cases (n)"},"hovermode":"closest","showlegend":true},"source":"A","config":{"showSendToCloud":false},"data":[{"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,1,1,1,3,5,2,10,13,10,17,8,11],"type":"bar","name":"Calgary Zone","marker":{"color":"rgba(212,0,114,1)","line":{"color":"rgba(212,0,114,1)"}},"textfont":{"color":"rgba(212,0,114,1)"},"error_y":{"color":"rgba(212,0,114,1)"},"error_x":{"color":"rgba(212,0,114,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":["2020-03-11","2020-03-16","2020-03-17"],"y":[1,1,1],"type":"bar","name":"Central Zone","marker":{"color":"rgba(0,170,210,1)","line":{"color":"rgba(0,170,210,1)"}},"textfont":{"color":"rgba(0,170,210,1)"},"error_y":{"color":"rgba(0,170,210,1)"},"error_x":{"color":"rgba(0,170,210,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":["2020-03-08","2020-03-10","2020-03-11","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[2,3,2,6,1,5,7,1],"type":"bar","name":"Edmonton Zone","marker":{"color":"rgba(95,106,114,1)","line":{"color":"rgba(95,106,114,1)"}},"textfont":{"color":"rgba(95,106,114,1)"},"error_y":{"color":"rgba(95,106,114,1)"},"error_x":{"color":"rgba(95,106,114,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":["2020-03-16","2020-03-17"],"y":[2,2],"type":"bar","name":"North Zone","marker":{"color":"rgba(119,184,0,1)","line":{"color":"rgba(119,184,0,1)"}},"textfont":{"color":"rgba(119,184,0,1)"},"error_y":{"color":"rgba(119,184,0,1)"},"error_x":{"color":"rgba(119,184,0,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":["2020-03-16","2020-03-18"],"y":[1,1],"type":"bar","name":"South Zone","marker":{"color":"rgba(255,121,0,1)","line":{"color":"rgba(255,121,0,1)"}},"textfont":{"color":"rgba(255,121,0,1)"},"error_y":{"color":"rgba(255,121,0,1)"},"error_x":{"color":"rgba(255,121,0,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}'
+i <- "canada-combined"
+i <- "hungary"
+e <- eval_all(clean[[i]]$observed$confirmed)
+e$summary
 
-Regions <- fromJSON('{"Calgary Zone": {"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,1,1,1,3,5,2,10,13,10,17,8,11]},"Central Zone":{"x":["2020-03-11","2020-03-16","2020-03-17"],"y":[1,1,1]},"Edmonton Zone": {"x":["2020-03-08","2020-03-10","2020-03-11","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[2,3,2,6,1,5,7,1]},"North Zone":{"x":["2020-03-16","2020-03-17"],"y":[2,2]},"South Zone":{"x":["2020-03-16","2020-03-18"],"y":[1,1]}}',
-                    simplifyDataFrame=FALSE)
-lapply(Regions, function(z) {
-  data.frame(x=z$x, y=z$y, z=cumsum(z$y))
-})
+v <- e$results$sq4
+plot(v$obs, v$fit, type="n", xlab="observed", ylab="fitted")
+polygon(c(v$obs, rev(v$obs)), c(v$lwr, rev(v$upr)), border="grey", col="grey")
+abline(0,1,lty=2)
+lines(v$obs, v$fit)
 
-# People tested for COVID-19 in Alberta by day
+zz <- list()
+for (i in names(clean)) {
+  cat(i, "\n")
+  flush.console()
+  z <- try(eval_all(clean[[i]]$observed$confirmed))
+  if (!inherits(z, "try-error"))
+    zz[[i]] <- z$summary
+}
 
-'{"x":{"visdat":{"481c24b12e8":["function () ","plotlyVisDat"]},"cur_data":"481c24b12e8","attrs":{"481c24b12e8":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":{},"y":{},"type":"bar","color":{},"colors":["#00aad2","#d40072"],"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"barmode":"stack","legend":{"orientation":"h","xanchor":"center","x":0.5,"yanchor":"top","y":1},"xaxis":{"domain":[0,1],"automargin":true,"type":"date","tickformat":"%d %b","title":"Lab Report Date","tickangle":90},"yaxis":{"domain":[0,1],"automargin":true,"title":"People tested for COVID-19 (n)"},"hovermode":"closest","showlegend":true},"source":"A","config":{"showSendToCloud":false},"data":[{"x":["2020-01-24","2020-01-27","2020-01-28","2020-01-30","2020-02-03","2020-02-05","2020-02-06","2020-02-07","2020-02-10","2020-02-11","2020-02-13","2020-02-14","2020-02-15","2020-02-16","2020-02-17","2020-02-18","2020-02-19","2020-02-20","2020-02-22","2020-02-23","2020-02-24","2020-02-25","2020-02-26","2020-02-27","2020-02-28","2020-02-29","2020-03-01","2020-03-02","2020-03-03","2020-03-04","2020-03-05","2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,1,8,3,7,1,3,1,5,12,9,28,6,4,7,6,8,6,9,1,3,12,16,15,15,30,27,26,27,72,57,63,289,454,720,972,979,1169,1439,1608,1820,1318,2147,970],"type":"bar","name":"Negative","marker":{"color":"rgba(0,170,210,1)","line":{"color":"rgba(0,170,210,1)"}},"textfont":{"color":"rgba(0,170,210,1)"},"error_y":{"color":"rgba(0,170,210,1)"},"error_x":{"color":"rgba(0,170,210,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,2,3,6,6,5,2,8,19,9,21,8,13],"type":"bar","name":"Positive","marker":{"color":"rgba(212,0,114,1)","line":{"color":"rgba(212,0,114,1)"}},"textfont":{"color":"rgba(212,0,114,1)"},"error_y":{"color":"rgba(212,0,114,1)"},"error_x":{"color":"rgba(212,0,114,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}'
+rn <- rownames(zz[[1]])
+rn <- c("ets", "ar", "lm4", "loglm4", "sq6", "logsq6")
+table(unlist(sapply(zz, function(z) rn[which.min(abs(z[rn,"bias"]))])))
+table(unlist(sapply(zz, function(z) rn[which.min(z[rn,"sq"])])))
+table(unlist(sapply(zz, function(z) rn[which.min(abs(0.95-z[rn,"inside"]))])))
 
-Negative <- fromJSON('{"x":["2020-01-24","2020-01-27","2020-01-28","2020-01-30","2020-02-03","2020-02-05","2020-02-06","2020-02-07","2020-02-10","2020-02-11","2020-02-13","2020-02-14","2020-02-15","2020-02-16","2020-02-17","2020-02-18","2020-02-19","2020-02-20","2020-02-22","2020-02-23","2020-02-24","2020-02-25","2020-02-26","2020-02-27","2020-02-28","2020-02-29","2020-03-01","2020-03-02","2020-03-03","2020-03-04","2020-03-05","2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,1,8,3,7,1,3,1,5,12,9,28,6,4,7,6,8,6,9,1,3,12,16,15,15,30,27,26,27,72,57,63,289,454,720,972,979,1169,1439,1608,1820,1318,2147,970]}')
-Positive <- fromJSON('{"x":["2020-03-06","2020-03-07","2020-03-08","2020-03-09","2020-03-10","2020-03-11","2020-03-12","2020-03-13","2020-03-14","2020-03-15","2020-03-16","2020-03-17","2020-03-18"],"y":[1,2,3,6,6,5,2,8,19,9,21,8,13]}')
+## lm can be slightly biased
+## sq is least biased
+## ets and loglm coverage are best
+
+## i=1, change j
 
 
-# Data sources
-# The Provincial Surveillance Information system (PSI) is a laboratory surveillance system which receives positive results for all Notifiable Diseases and diseases under laboratory surveillance from Alberta Precision Labs (APL). The system also receives negative results for a subset of organisms such as COVID-19. The system contains basic information on characteristics and demographics such as age, zone and gender.
-# Information such as hospitalizations and ICU admissions are received through enhanced case report forms sent by Alberta Health Services (AHS).
+## compare lin/log, ets/lm different window sizes (coverage + bias)
+## automate selection
+## run on multiple countries to see how it works
+## plot 1-day forecasts based on multiple models to see how that looks
+
 
