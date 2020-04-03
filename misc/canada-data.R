@@ -1,0 +1,301 @@
+library(jsonlite)
+
+baseurl <- "https://analythium.github.io/covid-19"
+load(url(file.path(baseurl, "data", "covid-19.RData")))
+load(url(file.path(baseurl, "data", "covid-19-canada-alberta.RData")))
+get_cases1 <- function(i) {
+    z <- clean[[i]]
+    y <-z$observed$confirmed
+    out <- data.frame(Days=seq_along(y) - 1L, Cases=y)
+    out$Region <- x[i, "location"]
+    out$Date <- as.Date(z$observed$date)
+    out
+}
+get_cases <- function(i) {
+    do.call(rbind, lapply(i, get_cases1))
+}
+widen <- function(x) {
+    xx <- data.frame(Date=sort(unique(COUNTRIES$Date)))
+    for (i in unique(x$Region)) {
+        tmp <- x[x$Region==i,]
+        cc <- tmp$Cases[match(xx$Date, tmp$Date)]
+        for (j in which(is.na(cc))) {
+            if (j > 1)
+                cc[j] <- cc[j-1]
+        }
+        xx[[i]] <- cc
+    }
+    xx <- xx[rowSums(!is.na(xx))>1,]
+    xx
+}
+
+COUNTRIES <- get_cases(c("france", "spain", "italy", "japan",
+    "canada-combined", "germany", "morocco", "hungary"))
+COUNTRIES$Region <- gsub(", Combined", "", COUNTRIES$Region)
+COUNTRIES <- widen(COUNTRIES)
+
+Can <- names(clean)[grepl("canada-", names(clean))]
+Can <- Can[!grepl("-princess", Can)]
+Can <- Can[Can != "canada-combined"]
+Can <- Can[Can != "canada-recovered"]
+CANADA <- get_cases(Can)
+CANADA$Region <- gsub("Canada/", "", CANADA$Region)
+CANADA <- widen(CANADA)
+
+ALBERTA <- do.call(rbind, lapply(1:5, function(i) {
+    y <- cumsum(out$zones$y[[i]])
+    o <- data.frame(Days=seq_along(y) - 1L, Cases=y)
+    o$Region <- out$zones$name[i]
+    o$Date <- as.Date(out$zones$x[[i]])
+    o
+}))
+ALBERTA$Region <- gsub(" Zone", "", ALBERTA$Region)
+ALBERTA <- widen(ALBERTA)
+
+toJSON(ALBERTA)#, pretty=TRUE)
+toJSON(CANADA)#, pretty=TRUE)
+
+
+
+p1 <- ggplot(data=COUNTRIES, aes(Date, y, group=Region)) +
+    geom_line(aes(color=Region)) +
+    labs(title="COVID-19 cases globally") +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases") #+ geom_smooth(aes(color=Region))
+ggplotly(p1)
+
+p2 <- ggplot(data=CANADA[CANADA$Date >= as.Date("2020-03-01"),],
+            aes(Date, y, group=Region)) +
+    labs(title="Provinces/territories in Canada") +
+    geom_line(aes(color=Region)) +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases") #+ geom_smooth(aes(color=Region))
+ggplotly(p2)
+
+p3 <- ggplot(data=ALBERTA,
+            aes(Date, y, group=Zone)) +
+    #geom_point(aes(color=Zone)) +
+    geom_line(aes(color=Region)) +
+    labs(title="Alberta zones") +
+    scale_y_continuous(trans='log10') +
+    xlab("Date") +
+    ylab("Confirmed cases")# +
+    #geom_smooth(aes(color=Zone))
+ggplotly(p3)
+
+yy <- out$routes$y[[1]] + out$routes$y[[2]] + out$routes$y[[3]]
+comp <- data.frame(x=as.Date(out$routes$x[[1]]),
+    y=100*c(out$routes$y[[1]]/yy, out$routes$y[[2]]/yy, out$routes$y[[3]]/yy),
+    Route=rep(out$routes$name, each=length(yy)))
+p4 <- ggplot(comp, aes(x=x, y=y, fill=Route)) +
+    geom_area() +
+    labs(title="Route of suspected acquisition in Alberta") +
+    xlab("Date") +
+    ylab("% of cases")
+fig4 <- ggplotly(p4)
+htmlwidgets::saveWidget(fig4, "fig4.html")
+
+library(sp)
+library(rgdal)
+library(rgeos)
+library(mefa4)
+
+ab <- readOGR("../data/alberta-areas.geojson")
+## EPSG:3400
+ab <- spTransform(ab, "+proj=tmerc +lat_0=0 +lon_0=-115 +k=0.9992 +x_0=500000 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs")
+ab@data$ID2 <- as.character(ab@data$ID)
+for (i in c("Edmonton", "Calgary", "Lethbridge", "Red Deer"))
+    ab@data$ID2[grep(paste0(i, " - "), ab@data$ID2)] <- i
+ab0 <- ab
+ab <- gUnaryUnion(ab, ab@data$ID2)
+ab <- as(ab, "SpatialPolygonsDataFrame")
+
+cent <- gCentroid(ab, byid=TRUE)
+
+
+SEQ <- seq(as.Date("2020-03-24"), Sys.Date(), 1)
+dates <- c("2020-03-20", "2020-03-22", as.character(SEQ))
+
+j <- lapply(dates, function(i)
+    fromJSON(paste0(baseurl, "/api/v1/data/canada/alberta/", i, ".json"))$areas)
+names(j) <- dates
+
+d <- matrix(0, length(ab0@data$ID), length(dates))
+dimnames(d) <- list(ab0@data$ID, dates)
+for (i in dates)
+    d[,i] <- j[[i]]$cases[match(ab0@data$ID, j[[i]]$area)]
+d <- groupSums(d, 1, ab0@data$ID2)[rownames(ab@data),]
+
+D <- d
+storage.mode(D) <- "character"
+
+COL <- hcl.colors(max(round(sqrt(d)))+1, "Lajolla")
+COL[1] <- "#E8E8E8"
+for (i in dates)
+    D[,i] <- COL[round(sqrt(d[,i]))+1]
+
+#ab@data <- data.frame(ab@data, D)
+library(magick)
+
+bb <- bbox(ab)
+kk <- bb[2,1]+seq(0.02, 0.18, length.out = 200)*diff(bb[2,])
+
+pts <- TRUE
+ii <- c(dates[1], dates[1], dates, rep(dates[length(dates)], 3))
+for (i in seq_along(ii)) {
+    png(paste0(i, ".png"), height=600, width=400)
+    op <- par(mar=c(0,0,1,0)+0.1)
+    if (pts) {
+        plot(ab, col=ifelse(d[,ii[i]]>0, "#ffe8e8", "#E8E8E8"), border="white", main=ii[i])
+        plot(cent[d[,ii[i]]>0,], add=TRUE, col="#ff000044", pch=19,
+            cex=10*d[d[,ii[i]]>0,ii[i]]/max(d)+0.6)
+    } else {
+        plot(ab, col=D[,ii[i]], border=D[,ii[i]], main=ii[i])
+        for (iii in 1:200) {
+            lines(bb[1,1]+c(0.02, 0.12)*diff(bb[1,]), kk[c(iii,iii)],
+                  col=hcl.colors(200, "Lajolla")[iii])
+        }
+        text(bb[1,1]+0.15*diff(bb[1,]), kk[1], 0,
+             cex=0.8, col=hcl.colors(200, "Lajolla")[200])
+        text(bb[1,1]+0.15*diff(bb[1,]), kk[200], max(d),
+             cex=0.8, col=hcl.colors(200, "Lajolla")[200])
+    }
+    par(op)
+    dev.off()
+}
+fn <- paste0(seq_along(ii), ".png")
+img <- image_read(fn)
+img3 <- image_animate(image_morph(img, 5), 10)
+image_write(img3, "covid-ab.gif")
+unlink(fn)
+
+
+xv <- out$routes$x[[1]]
+yv <- do.call(cbind, out$routes$y)
+rownames(yv) <- xv
+colnames(yv) <- out$routes$name
+for (i in 1:3)
+    yv[-1,i] <- yv[-1,i] - yv[-nrow(yv),i]
+yv <- yv/rowSums(yv)
+
+library(forecast)
+
+s <- read.csv("../data/covid-19-canada-alberta.csv")
+
+#y <- s$Total_confirmed - s$Total_deaths - s$Total_recovered
+y <- s$Total_confirmed
+res <- list()
+for (i in 1:(length(y)-7)) {
+#    f <- ets(y[1:i])
+    f <- ets(log(y[1:i]))
+    p <- forecast(f, 7)
+    pm <- cbind(mean=p$mean, lower=p$lower[,2], upper=p$upper[,2])
+    pm <- exp(pm)
+    ob <- y[(i+1):(i+7)]
+    res[[i]] <- data.frame(as.matrix(cbind(x=(i+1):(i+7),
+        obs=ob, inside=ifelse(pm[,2] <= ob & pm[,3] >= ob, 1, 0), pm)))
+}
+Res <- data.frame(do.call(rbind, res))
+c(p=mean(Res$inside), ssq=sum((Res$obs-Res$pm.mean)^2)/nrow(Res))
+
+
+for (i in seq_along(res)) {
+    png(paste0("ets", i, ".png"), height=400, width=600)
+    plot(y[1:(i+7)], xlim=c(1, length(y)), lwd=2,
+         ylim=c(0, max(res[[length(res)]]$pm.upper)), type="l",
+         xlab="Days since case #1", ylab="# cases")
+    polygon(c(res[[i]]$x, rev(res[[i]]$x)),
+            c(res[[i]]$pm.lower, rev(res[[i]]$pm.upper)),
+            col="#ff000044", border="#ff000044")
+    lines(res[[i]]$x, res[[i]]$pm.mean, col=2, lwd=2)
+    dev.off()
+}
+
+img <- image_read(paste0("ets", seq_along(res), ".png"))
+
+img3 <- image_animate(image_morph(img, 15), 10)
+
+image_write(img3, "covid-ets.gif")
+unlink(paste0("ets", seq_along(res), ".png"))
+
+
+
+library(PVAClone)
+
+m <- pva(y, ricker("poisson", fixed=c(b=0)), 10)
+
+prx <- 0:(length(y)+7)
+pr <- numeric(length(prx))
+pr[1] <- log(y[1])
+for (i in 2:length(pr))
+    pr[i] <- pr[i-1] + coef(m)["a"] + coef(m)["b"]*exp(pr[i-1])
+pr <- exp(pr)
+
+plot(prx, pr, type="l",
+    ylab="# of cases", xlab="Days since")
+lines(seq_along(y)-1, y, col=2, type="b", lwd=2, pch=19)
+
+
+## log-linear model
+
+wres <- list()
+for (w in 3:10) {
+
+#    w <- 4
+    ww <- (w+1):(length(y)-w)
+    res <- list()
+    for (i in seq_along(ww)) {
+        yy <- log(y[(ww[i]-w):(ww[i]-1)])
+        xx <- seq(-1, 0, length.out = w)
+        f <- lm(yy ~ xx)
+        p <- predict(f, newdata=data.frame(xx=seq(0, 1, length.out = w+1)[-1]),
+                     interval = "pred")
+        colnames(p) <- c("mean", "lower", "upper")
+        pm <- exp(p)
+        ob <- y[(ww[i]):(ww[i]+w-1)]
+        res[[i]] <- data.frame(x=(ww[i]):(ww[i]+w-1),
+            obs=ob, tt=1:w,
+            inside=ifelse(pm[,2] <= ob & pm[,3] >= ob, 1, 0), pm)
+    }
+    Res <- do.call(rbind, res)
+    Res <- Res[Res$tt==2,]
+    wres[[length(wres)+1]] <- c(w=w, p=mean(Res$inside),
+                                   ssq=sum((Res$obs-Res$mean)^2)/nrow(Res))
+    if (FALSE) {
+    for (i in seq_along(res)) {
+        png(paste0("ets", i, ".png"), height=400, width=600)
+        plot(y, xlim=c(1, length(y)),
+             ylim=c(0, max(res[[length(res)]]$upper)), type="n",
+             xlab="Days since case #1", ylab="# cases")
+        polygon(c(res[[i]]$x, rev(res[[i]]$x)),
+                c(res[[i]]$lower, rev(res[[i]]$upper)),
+                col="#ff000044", border="#ff000044")
+        lines(1:max(res[[i]]$x), y[1:max(res[[i]]$x)], col=1, lwd=2)
+        lines(res[[i]]$x, res[[i]]$mean, col=2, lwd=2)
+        dev.off()
+    }
+
+    img <- image_read(paste0("ets", seq_along(res), ".png"))
+
+    img3 <- image_animate(image_morph(img, 15), 10)
+
+    image_write(img3, paste0("covid-ets-w", w, ".gif"))
+    unlink(paste0("ets", seq_along(res), ".png"))
+    }
+}
+
+do.call(rbind, wres)
+
+w <- 4
+yy <- log(y[(length(y)-w+1):length(y)])
+        xx <- seq(-1, 0, length.out = w)
+        f <- lm(yy ~ xx)
+        p <- predict(f, newdata=data.frame(xx=seq(0, 1, length.out = w+1)[-1]),
+                     interval = "pred")
+        colnames(p) <- c("mean", "lower", "upper")
+        pm <- exp(p)
+
+## use ssq based on 1-day forecast
+
