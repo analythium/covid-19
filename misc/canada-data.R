@@ -102,7 +102,7 @@ library(rgdal)
 library(rgeos)
 library(mefa4)
 
-ab <- readOGR("../data/alberta-areas.geojson")
+ab <- readOGR("./data/alberta-areas.geojson")
 ## EPSG:3400
 ab <- spTransform(ab, "+proj=tmerc +lat_0=0 +lon_0=-115 +k=0.9992 +x_0=500000 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs")
 ab@data$ID2 <- as.character(ab@data$ID)
@@ -142,15 +142,24 @@ library(magick)
 bb <- bbox(ab)
 kk <- bb[2,1]+seq(0.02, 0.18, length.out = 200)*diff(bb[2,])
 
+vv <- c(0, 2, 4, 6, 8)+0.6
+
+setwd("misc")
+
 pts <- TRUE
 ii <- c(dates[1], dates[1], dates, rep(dates[length(dates)], 3))
 for (i in seq_along(ii)) {
     png(paste0(i, ".png"), height=600, width=400)
     op <- par(mar=c(0,0,1,0)+0.1)
     if (pts) {
-        plot(ab, col=ifelse(d[,ii[i]]>0, "#ffe8e8", "#E8E8E8"), border="white", main=ii[i])
+        plot(ab, col=ifelse(d[,ii[i]]>0, "#e8e8ff", "#E8E8E8"), border="white", main=ii[i])
         plot(cent[d[,ii[i]]>0,], add=TRUE, col="#ff000044", pch=19,
-            cex=10*d[d[,ii[i]]>0,ii[i]]/max(d)+0.6)
+            cex=8*sqrt(d[d[,ii[i]]>0,ii[i]]/max(d))+0.6)
+        points(rep(bb[1,1]+0.1*diff(bb[1,]), length(vv)),
+               rep(bb[2,1]+0.15*diff(bb[2,]), length(vv)),
+               cex=vv, col="#ff000044", pch=19)
+        text(bb[1,1]+0.1*diff(bb[1,]), bb[2,1]+0.21*diff(bb[2,]),
+            max(d), cex=0.9)
     } else {
         plot(ab, col=D[,ii[i]], border=D[,ii[i]], main=ii[i])
         for (iii in 1:200) {
