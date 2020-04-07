@@ -297,14 +297,32 @@ for (w in 3:10) {
 
 do.call(rbind, wres)
 
-w <- 4
-yy <- log(y[(length(y)-w+1):length(y)])
-        xx <- seq(-1, 0, length.out = w)
-        f <- lm(yy ~ xx)
-        p <- predict(f, newdata=data.frame(xx=seq(0, 1, length.out = w+1)[-1]),
-                     interval = "pred")
-        colnames(p) <- c("mean", "lower", "upper")
-        pm <- exp(p)
+xx <- read.csv("data/covid-19-canada-alberta.csv")
+d <- as.integer(as.Date(xx$Date))-as.integer(as.Date(xx$Date))[1]
+y <- xx$Total_confirmed
 
-## use ssq based on 1-day forecast
+xx <- get_cases("canada-combined")
+d <- xx$Days
+y <- xx$Cases
+
+w <- 4
+n <- length(y)
+r <- data.frame(t(sapply(seq_len(n-w), function(i) {
+    logy <- log(y[i:(i+w-1)])
+    x <- (-w+1):0
+    c(t=mean(i:(i+w-1)), Rt=unname(exp(coef(lm(logy ~ x))[2])))
+})))
+
+
+library(segmented)
+library(mgcv)
+
+m <- lm(Rt ~ t, r)
+s <- segmented(m)
+
+plot(s, col=2, lty=2, ylim=range(r$Rt))
+lines(Rt ~ t, r)
+lines(fitted(mgcv::gam(Rt ~ s(t), data=r)), col=3)
+
+
 
