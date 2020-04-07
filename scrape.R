@@ -10,12 +10,21 @@ url <- "https://covid19stats.alberta.ca/"
 h <- read_html(url)
 n <- html_nodes(h, 'script')
 n <- n[grep("htmlwidget-", n)]
+n <- n[!startsWith(as.character(n), "<script>(function()")]
 txt <- html_text(n)
 json <- lapply(txt, fromJSON)
 n2 <- html_nodes(h, 'table')
-tab <- html_table(n2)
+tab <- html_table(n2[-1L])
+
+names(json) <- paste0("node", seq_along(json))
+names(tab) <- paste0("node", seq_along(tab)+length(json))
+
 out <- list()
 out$source <- list(url=url, time=Sys.time())
+
+out <- c(out, json, tab)
+
+if (FALSE) {
 
 ## Figure 1
 ## Cumulative COVID-19 cases in Alberta by day
@@ -122,6 +131,8 @@ x[,2L] <- as.integer(x[,2L])
 x[,3L] <- gsub(",", "", x[,3L])
 x[,3L] <- as.integer(x[,3L])
 out$testingbyzone <- x
+
+}
 
 ## write json
 cat("OK\nWriting results ... ")
