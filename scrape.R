@@ -14,7 +14,12 @@ n <- n[!startsWith(as.character(n), "<script>(function()")]
 txt <- html_text(n)
 json <- lapply(txt, fromJSON)
 n2 <- html_nodes(h, 'table')
-tab <- html_table(n2[-1L])
+tab <- list()
+for (i in seq_along(n2)) {
+    tmp <- try(html_table(n2[i]))
+    if (!inherits(tmp, "try-error"))
+        tab[[length(tab)+1L]] <- tmp[[1L]]
+}
 
 names(json) <- paste0("node", seq_along(json))
 names(tab) <- paste0("node", seq_along(tab)+length(json))
