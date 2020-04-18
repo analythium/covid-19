@@ -16,7 +16,7 @@ json <- lapply(txt, fromJSON)
 n2 <- html_nodes(h, 'table')
 tab <- list()
 for (i in seq_along(n2)) {
-    tmp <- try(html_table(n2[i]))
+    tmp <- try(html_table(n2[i]), silent=TRUE)
     if (!inherits(tmp, "try-error"))
         tab[[length(tab)+1L]] <- tmp[[1L]]
 }
@@ -142,13 +142,12 @@ out$testingbyzone <- x
 ## write json
 cat("OK\nWriting results for Alberta ... ")
 dir.create("_stats/api/v1/data")
-dir.create("_stats/api/v1/data/canada")
-dir.create("_stats/api/v1/data/canada/alberta")
-dir.create("_stats/api/v1/data/canada/alberta/latest")
+dir.create("_stats/api/v1/data/alberta")
+dir.create("_stats/api/v1/data/alberta/latest")
 writeLines(toJSON(out, auto_unbox = TRUE),
-    "_stats/api/v1/data/canada/alberta/latest/index.json")
+    "_stats/api/v1/data/alberta/latest/index.json")
 writeLines(toJSON(out, auto_unbox = TRUE),
-    paste0("_stats/api/v1/data/canada/alberta/", as.Date(Sys.time()), ".json"))
+    paste0("_stats/api/v1/data/alberta/", as.Date(Sys.time()), ".json"))
 
 ## Canada data
 
@@ -248,14 +247,29 @@ for (i in names(z)) {
     z[[i]] <- s
 }
 
+pr <- sort(unique(x$prname))
+tmp <- data.frame(Date=seq(min(x$date), max(x$date), 1))
+cn <- colnames(z[[1]])[5:ncol(z[[1]])]
+all <- list()
+for (i in cn) {
+  all[[i]] <- tmp
+  for (j in pr) {
+    v <- z[[j]][[i]]
+    all[[i]][[j]] <- z[[j]][[i]][match(tmp$Date, z[[j]]$date)]
+  }
+}
+
 cat("OK\nWriting results for Canada... ")
-dir.create("_stats/api/v1/data/canada/latest")
+dir.create("_stats/api/v1/data/canada")
+dir.create("_stats/api/v1/data/canada/regions")
 writeLines(toJSON(z),
-    "_stats/api/v1/data/canada/latest/index.json")
-writeLines(toJSON(z),
-    paste0("_stats/api/v1/data/canada/", as.Date(Sys.time()), ".json"))
-Canada <- z
-Alberta <- out
-save(Canada, Alberta, file="_stats/data/covid-19-canada.RData")
+    "_stats/api/v1/data/canada/regions/index.json")
+writeLines(toJSON(all),
+    "_stats/api/v1/data/canada/index.json")
+#Canada <- z
+#Alberta <- out
+#save(Canada, Alberta, file="_stats/data/covid-19-canada.RData")
 cat("OK\nDONE\n\n")
+
+
 
