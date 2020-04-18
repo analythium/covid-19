@@ -1,5 +1,61 @@
 library(jsonlite)
 
+fn <- "https://health-infobase.canada.ca/src/data/covidLive/covid19.csv"
+h <- read.csv(fn, nrows=1)
+ccl <- c("pruid"="integer", "prname"="character", "prnameFR"="character",
+    "date"="character", "numconf"="integer", "numprob"="integer",
+    "numdeaths"="integer", "numtotal"="integer", "numtested"="integer",
+    "numrecover"="integer", "percentrecover"="numeric",
+    "ratetested"="numeric", "numtoday"="integer", "percentoday"="numeric")
+ccl <- structure(ccl[match(colnames(h), names(ccl))], names=colnames(h))
+ccl[is.na(ccl)] <- "character"
+x <- read.csv(fn, colClasses=ccl, na.strings = c("NA", "N/A"))
+x$date <- as.Date(x$date, "%d-%m-%Y")
+x$numtoday[!is.na(x$numtoday) & x$numtoday < 0] <- 0
+x$percentoday[!is.na(x$percentoday) & x$percentoday < 0] <- 0
+summary(x)
+str(x)
+
+z <- lapply(sort(unique(x$prname)), function(i) x[x$prname==i,])
+names(z) <- sort(unique(x$prname))
+sapply(z, dim)
+
+straight_ts <- function(zz) {
+    zz <- zz[order(zz$date),]
+    xx <- seq(min(zz$date), max(zz$date), 1)
+    zz <- zz[match(xx, zz$date),]
+    zz$date <- xx
+    zz
+}
+
+rate_ts <- function(y, w=4, ...) {
+  res <- list()
+  for (j in w:(length(y)-1L)) {
+    i <- max(1L, j-w-1L)
+    f <- try(fit_ts(y, i, j, method="lm", log=TRUE, k=1), silent=TRUE)
+    if (!inherits(f, "try-error"))
+        res[[length(res)+1L]] <- f
+  }
+  t(sapply(res, function(z) c(x=z$x, r=z$rate)))
+}
+
+for (i in names(z)) {
+    s <- straight_ts(z[[i]])
+    if (sum(s$numtotal, na.rm=TRUE) > 0) {
+        r <- rate_ts(s$numtotal)
+        s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
+        s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
+            log(2)/log(s$rate), NA)
+    } else {
+        s$rate <- NA
+        s$double <- NA
+    }
+    z[[i]] <- s
+}
+toJSON(z)
+
+
+
 baseurl <- "https://analythium.github.io/covid-19"
 load(url(file.path(baseurl, "data", "covid-19.RData")))
 load(url(file.path(baseurl, "data", "covid-19-canada-alberta.RData")))
