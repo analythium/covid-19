@@ -140,7 +140,7 @@ out$testingbyzone <- x
 }
 
 ## write json
-cat("OK\nWriting results ... ")
+cat("OK\nWriting results for Alberta ... ")
 dir.create("_stats/api/v1/data")
 dir.create("_stats/api/v1/data/canada")
 dir.create("_stats/api/v1/data/canada/alberta")
@@ -149,5 +149,113 @@ writeLines(toJSON(out, auto_unbox = TRUE),
     "_stats/api/v1/data/canada/alberta/latest/index.json")
 writeLines(toJSON(out, auto_unbox = TRUE),
     paste0("_stats/api/v1/data/canada/alberta/", as.Date(Sys.time()), ".json"))
-save(out, file="_stats/data/covid-19-canada-alberta.RData")
+
+## Canada data
+
+cat("OK\nNormalizing CSV ... ")
+
+fn <- "https://health-infobase.canada.ca/src/data/covidLive/covid19.csv"
+h <- read.csv(fn, nrows=1)
+ccl <- c("pruid"="integer", "prname"="character", "prnameFR"="character",
+    "date"="character", "numconf"="integer", "numprob"="integer",
+    "numdeaths"="integer", "numtotal"="integer", "numtested"="integer",
+    "numrecover"="integer", "percentrecover"="numeric",
+    "ratetested"="numeric", "numtoday"="integer", "percentoday"="numeric")
+ccl <- structure(ccl[match(colnames(h), names(ccl))], names=colnames(h))
+ccl[is.na(ccl)] <- "character"
+x <- read.csv(fn, colClasses=ccl, na.strings = c("NA", "N/A"))
+x$date <- as.Date(x$date, "%d-%m-%Y")
+x$numtoday[!is.na(x$numtoday) & x$numtoday < 0] <- 0
+x$percentoday[!is.na(x$percentoday) & x$percentoday < 0] <- 0
+#summary(x)
+#str(x)
+
+z <- lapply(sort(unique(x$prname)), function(i) x[x$prname==i,])
+names(z) <- sort(unique(x$prname))
+
+fit_ts <- function(y, i, j, method="ets", log=FALSE, k=1) {
+  method <- match.arg(method, c("ets", "arima", "lm", "sq"))
+  yy <- y[i:j]
+  x <- (j+1):(j+k)
+  if (log)
+    yy <- log(yy)
+  if (method %in% c("lm", "sq")) {
+    xx <- i:j
+    xx2 <- xx^2
+    m <- if (method == "lm")
+      lm(yy ~ xx) else lm(yy ~ xx + xx2)
+    p <- predict(m, data.frame(xx=x, xx2=x^2), interval="prediction")
+    fit <- p[,"fit"]
+    lwr <- p[,"lwr"]
+    upr <- p[,"upr"]
+  } else {
+    m <- if (method == "ets")
+      ets(yy) else auto.arima(yy)
+    p <- forecast(m, k)
+    fit <- p$mean
+    lwr <- p$lower[,"95%"]
+    upr <- p$upper[,"95%"]
+  }
+  if (log) {
+    fit <- exp(fit)
+    lwr <- exp(lwr)
+    upr <- exp(upr)
+  }
+  if (method == "lm") {
+    r <- if (log)
+      exp(coef(m)[2L]) else sum(coef(m)) / coef(m)[1L]
+  } else {
+    r <- fit[1L] / y[j]
+  }
+  out <- list(i=i, j=j, k=k, method=method, y=y, x=x, obs=y[x],
+    rate=as.numeric(r),
+    fit=as.numeric(fit), lwr=as.numeric(lwr), upr=as.numeric(upr))
+  class(out) <- "fit_ts"
+  out
+}
+
+straight_ts <- function(zz) {
+    zz <- zz[order(zz$date),]
+    xx <- seq(min(zz$date), max(zz$date), 1)
+    zz <- zz[match(xx, zz$date),]
+    zz$date <- xx
+    zz
+}
+
+rate_ts <- function(y, w=4, ...) {
+  res <- list()
+  for (j in w:(length(y)-1L)) {
+    i <- max(1L, j-w-1L)
+    f <- try(fit_ts(y, i, j, method="lm", log=TRUE, k=1), silent=TRUE)
+    if (!inherits(f, "try-error"))
+        res[[length(res)+1L]] <- f
+  }
+  t(sapply(res, function(z) c(x=z$x, r=z$rate)))
+}
+
+cat("OK\nEstimating rates ... ")
+for (i in names(z)) {
+    s <- straight_ts(z[[i]])
+    if (sum(s$numtotal, na.rm=TRUE) > 0) {
+        r <- suppressWarnings(rate_ts(s$numtotal))
+        s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
+        s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
+            log(2)/log(s$rate), NA)
+    } else {
+        s$rate <- NA
+        s$double <- NA
+    }
+    z[[i]] <- s
+}
+
+cat("OK\nWriting results for Canada... ")
+dir.create("_stats/api/v1/data/canada/latest")
+writeLines(toJSON(z),
+    "_stats/api/v1/data/canada/latest/index.json")
+writeLines(toJSON(z),
+    paste0("_stats/api/v1/data/canada/", as.Date(Sys.time()), ".json"))
+Canada <- z
+Alberta <- out
+save(Canada, Alberta, file="_stats/data/covid-19-canada.RData")
 cat("OK\nDONE\n\n")
+
