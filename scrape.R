@@ -149,6 +149,24 @@ writeLines(toJSON(out, auto_unbox = TRUE),
 writeLines(toJSON(out, auto_unbox = TRUE),
     paste0("_stats/api/v1/data/alberta/", as.Date(Sys.time()), ".json"))
 
+#tab1n <- tab[[1]][-(1:2),c(1,2,4,6,8)]
+#colnames(tab1n) <- c("Age", "Female", "Male", "Unknown", "All")
+#tab1p <- tab[[1]][-(1:2),c(1,3,5,7,9)]
+#colnames(tab1p) <- c("Age", "Female", "Male", "Unknown", "All")
+#for (i in 2:5) {
+#  tab1n[,i] <- as.numeric(gsub(",", "", tab1n[,i]))
+#  tab1p[,i] <- as.numeric(gsub(",", "", tab1p[,i]))
+#}
+
+ab <- data.frame(Date=json[[4L]]$x$data$x[[1]])
+for (i in 1:length(json[[4L]]$x$data$name)) {
+  nam <- gsub(" Zone", "", json[[4L]]$x$data$name[i])
+  ab[[nam]] <- json[[4L]]$x$data$y[[i]]
+}
+writeLines(toJSON(ab),
+    "_stats/api/v1/data/alberta/index.json")
+
+
 ## Canada data
 
 cat("OK\nNormalizing CSV ... ")
