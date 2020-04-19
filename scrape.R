@@ -236,10 +236,11 @@ cat("OK\nEstimating rates ... ")
 for (i in names(z)) {
     s <- straight_ts(z[[i]])
     if (sum(s$numtotal, na.rm=TRUE) > 0) {
-        r <- suppressWarnings(rate_ts(s$numtotal))
-        s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
-        s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
-            log(2)/log(s$rate), NA)
+      r <- suppressWarnings(rate_ts(s$numtotal))
+      s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
+      s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
+        log(2)/log(s$rate), NA)
+      s$rate <- 100 * (s$rate - 1)
     } else {
         s$rate <- NA
         s$double <- NA
