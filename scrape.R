@@ -283,7 +283,7 @@ d2d <- read.csv(paste0(f0, "time_series_covid19_deaths_global.csv"),
 #d2r <- read.csv(paste0(f0, "time_series_covid19_recovered_global.csv"),
 #                stringsAsFactors = FALSE, check.names=FALSE)
 
-st <- sort(unique(l1c$Province_State))
+st <- sort(unique(d1c$Province_State))
 cold <- grepl("/", colnames(d1c))
 d3c <- d3d <- matrix(NA, length(st), sum(cold))
 dimnames(d3c) <- dimnames(d3d) <- list(st, colnames(d1c)[cold])
@@ -309,7 +309,7 @@ l2c <- d2c[,1:4]
 l2d <- d2d[,1:4]
 #l2r <- d2r[,1:4]
 stopifnot(all(l2c$UID==l2d$UID))
-stopifnot(all(l2c$UID==l2r$UID))
+#stopifnot(all(l2c$UID==l2r$UID))
 l2c$Combined_Key <- ifelse(l2c[["Province/State"]] == "",
   l2c[["Country/Region"]],
   paste0(l2c[["Country/Region"]], ", ", l2c[["Province/State"]]))
@@ -328,7 +328,7 @@ l12$Confirmed[l12$Confirmed < 0] <- 0
 l12$Deaths[l12$Deaths < 0] <- 0
 l12 <- l12[l12$Long != 0 & l12$Lat != 0,]
 
-q=l12#[1:10,]
+q <- l12
 q$ConfirmedScale <- sqrt(q$Confirmed/max(q$Confirmed))
 q$ConfirmedScale[is.na(q$ConfirmedScale)] <- 0
 q$DeathsScale <- sqrt(q$Deaths/max(q$Deaths))
