@@ -158,15 +158,6 @@ writeLines(toJSON(out, auto_unbox = TRUE),
 #  tab1p[,i] <- as.numeric(gsub(",", "", tab1p[,i]))
 #}
 
-ab <- data.frame(Date=json[[4L]]$x$data$x[[1]])
-for (i in 1:length(json[[4L]]$x$data$name)) {
-  nam <- gsub(" Zone", "", json[[4L]]$x$data$name[i])
-  ab[[nam]] <- json[[4L]]$x$data$y[[i]]
-}
-writeLines(toJSON(ab),
-    "_stats/api/v1/data/alberta/index.json")
-
-
 ## Canada data
 
 cat("OK\nNormalizing CSV ... ")
@@ -285,6 +276,22 @@ writeLines(toJSON(z),
     "_stats/api/v1/data/canada/regions/index.json")
 writeLines(toJSON(all),
     "_stats/api/v1/data/canada/index.json")
+
+
+ab <- data.frame(Date=json[[4L]]$x$data$x[[1]])
+for (i in 1:length(json[[4L]]$x$data$name)) {
+  nam <- gsub(" Zone", "", json[[4L]]$x$data$name[i])
+  ab[[nam]] <- json[[4L]]$x$data$y[[i]]
+}
+abr <- abd <- ab
+for (i in 2:ncol(ab)) {
+  r <- suppressWarnings(rate_ts(ab[,i]))
+  r <- r[match(seq_len(nrow(ab)), r[,"x"]),"r"]
+  abd[,i] <- ifelse(!is.na(r) & r > 1.00001, log(2)/log(r), NA)
+  abr[,i] <- 100 * (r - 1)
+}
+writeLines(toJSON(list(numtotal=ab, rate=abr, double=abd)),
+    "_stats/api/v1/data/alberta/index.json")
 
 
 cat("OK\nGetting global data ... ")
