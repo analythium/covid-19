@@ -357,13 +357,13 @@ cat("OK\nWriting global data ... ")
 dir.create("_stats/api/v1/data/world")
 dir.create("_stats/api/v1/data/world/latest")
 writeLines(toJSON(q),
-    "_stats/api/v1/data/canada/world/latest/index.json")
+    "_stats/api/v1/data/world/latest/index.json")
 dir.create("_stats/api/v1/data/world/confirmed")
 writeLines(toJSON(dc),
-    "_stats/api/v1/data/canada/world/confirmed/index.json")
+    "_stats/api/v1/data/world/confirmed/index.json")
 dir.create("_stats/api/v1/data/world/deaths")
 writeLines(toJSON(dd),
-    "_stats/api/v1/data/canada/world/deaths/index.json")
+    "_stats/api/v1/data/world/deaths/index.json")
 
 cat("OK\nDONE\n\n")
 
