@@ -269,12 +269,14 @@ for (i in cn) {
   }
 }
 
+toJSON(list(as.list(h), pretty=TRUE)
+
 cat("OK\nWriting results for Canada ... ")
 dir.create("_stats/api/v1/data/canada")
 dir.create("_stats/api/v1/data/canada/regions")
-writeLines(toJSON(z),
+writeLines(toJSON(z, na="null"),
     "_stats/api/v1/data/canada/regions/index.json")
-writeLines(toJSON(all),
+writeLines(toJSON(all, dataframe="columns", na="null"),
     "_stats/api/v1/data/canada/index.json")
 
 
@@ -290,9 +292,9 @@ for (i in 2:ncol(ab)) {
   abd[,i] <- ifelse(!is.na(r) & r > 1.00001, log(2)/log(r), NA)
   abr[,i] <- 100 * (r - 1)
 }
-writeLines(toJSON(list(numtotal=ab, rate=abr, double=abd)),
+writeLines(toJSON(list(numtotal=ab, rate=abr, double=abd),
+    dataframe="columns", na="null"),
     "_stats/api/v1/data/alberta/index.json")
-
 
 cat("OK\nGetting global data ... ")
 f0 <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
