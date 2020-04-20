@@ -269,8 +269,6 @@ for (i in cn) {
   }
 }
 
-toJSON(list(as.list(h), pretty=TRUE)
-
 cat("OK\nWriting results for Canada ... ")
 dir.create("_stats/api/v1/data/canada")
 dir.create("_stats/api/v1/data/canada/regions")
