@@ -81,7 +81,7 @@ qq$vd <- qq$Deaths/max(qq$Deaths)
 l <- leaflet(qq) %>% addTiles() %>%
   addCircleMarkers(
     color="#F30",
-    radius=~20*sqrt(vd)+5,
+    radius=~10*sqrt(vd)+5,
     stroke = FALSE, fillOpacity = 0.5,
     label=~paste0(Combined_Key, ": ", qq$Confirmed)) %>%
   setView(lng = 10, lat = 25, zoom = 03) %>%
