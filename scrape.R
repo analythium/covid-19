@@ -250,22 +250,82 @@ rate_ts <- function(y, w=4, ...) {
   }
   t(sapply(res, function(z) c(x=z$x, r=z$rate)))
 }
+## http://www.cookbook-r.com/Manipulating_data/Calculating_a_moving_average/
+movingAverage <- function(x, n=1, centered=FALSE) {
+
+    if (centered) {
+        before <- floor  ((n-1)/2)
+        after  <- ceiling((n-1)/2)
+    } else {
+        before <- n-1
+        after  <- 0
+    }
+
+    # Track the sum and count of number of non-NA items
+    s     <- rep(0, length(x))
+    count <- rep(0, length(x))
+
+    # Add the centered data
+    new <- x
+    # Add to count list wherever there isn't a
+    count <- count + !is.na(new)
+    # Now replace NA_s with 0_s and add to total
+    new[is.na(new)] <- 0
+    s <- s + new
+
+    # Add the data from before
+    i <- 1
+    while (i <= before) {
+        # This is the vector with offset values to add
+        new   <- c(rep(NA, i), x[1:(length(x)-i)])
+
+        count <- count + !is.na(new)
+        new[is.na(new)] <- 0
+        s <- s + new
+
+        i <- i+1
+    }
+
+    # Add the data from after
+    i <- 1
+    while (i <= after) {
+        # This is the vector with offset values to add
+        new   <- c(x[(i+1):length(x)], rep(NA, i))
+
+        count <- count + !is.na(new)
+        new[is.na(new)] <- 0
+        s <- s + new
+
+        i <- i+1
+    }
+
+    # return sum divided by count
+    s/count
+}
 
 cat("OK\nEstimating rates ... ")
 for (i in names(z)) {
-    s <- straight_ts(z[[i]])
-    if (sum(s$numtotal, na.rm=TRUE) > 0) {
-      r <- suppressWarnings(rate_ts(s$numtotal))
-      s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
-      s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
-        log(2)/log(s$rate), NA)
-      s$rate <- 100 * (s$rate - 1)
-    } else {
-        s$rate <- NA
-        s$double <- NA
-    }
-    z[[i]] <- s
+  s <- straight_ts(z[[i]])
+    #if (sum(s$numtotal, na.rm=TRUE) > 0) {
+    #  r <- suppressWarnings(rate_ts(s$numtotal))
+    #  s$rate <- r[match(seq_len(nrow(s)), r[,"x"]),"r"]
+    #  s$double <- ifelse(!is.na(s$rate) & s$rate > 1.00001,
+    #    log(2)/log(s$rate), NA)
+    #  s$rate <- 100 * (s$rate - 1)
+    #} else {
+    #    s$rate <- NA
+    #    s$double <- NA
+    #}
+  ntot <- s$numtotal
+  rt <- c(NA, ntot[-1] / ntot[-length(ntot)])
+  rt[is.infinite(rt)] <- NA
+  rt[ntot < 10] <- NA
+  s$rate <- movingAverage(100 * (rt - 1), 3)
+  s$double <- movingAverage(log(2)/log(rt), 3)
+  s$double[is.infinite(s$double)] <- NA
+  z[[i]] <- s
 }
+
 
 pr <- sort(unique(x$prname))
 pr <- pr[!(pr %in% c("Canada", "Repatriated travellers"))]
@@ -306,11 +366,18 @@ for (i in 1:length(json[[abi]]$x$data$name)) {
 }
 abr <- abd <- ab
 for (i in 2:ncol(ab)) {
-  r <- suppressWarnings(rate_ts(ab[,i]))
-  r <- r[match(seq_len(nrow(ab)), r[,"x"]),"r"]
-  abd[,i] <- ifelse(!is.na(r) & r > 1.00001, log(2)/log(r), NA)
-  abr[,i] <- 100 * (r - 1)
+#  r <- suppressWarnings(rate_ts(ab[,i]))
+#  r <- r[match(seq_len(nrow(ab)), r[,"x"]),"r"]
+#  abd[,i] <- ifelse(!is.na(r) & r > 1.00001, log(2)/log(r), NA)
+#  abr[,i] <- 100 * (r - 1)
+  rt <- c(NA, ab[-1,i] / ab[-nrow(ab),i])
+  rt[is.infinite(rt)] <- NA
+  rt[ab[,i] < 10] <- NA
+  abr[,i] <- movingAverage(100 * (rt - 1), 3)
+  abd[,i] <- movingAverage(log(2)/log(rt), 3)
+  abd[is.infinite(abd[,i]),i] <- NA
 }
+
 writeLines(toJSON(list(numtotal=ab, rate=abr, double=abd),
     dataframe="columns", na="null"),
     "_stats/api/v1/data/alberta/index.json")
