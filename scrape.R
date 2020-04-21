@@ -171,7 +171,17 @@ ccl <- c("pruid"="integer", "prname"="character", "prnameFR"="character",
     "ratetested"="numeric", "numtoday"="integer", "percentoday"="numeric")
 ccl <- structure(ccl[match(colnames(h), names(ccl))], names=colnames(h))
 ccl[is.na(ccl)] <- "character"
-x <- read.csv(fn, colClasses=ccl, na.strings = c("NA", "N/A"))
+#x <- read.csv(fn, colClasses=ccl, na.strings = c("NA", "N/A"))
+x <- read.csv(fn, na.strings = c("NA", "N/A"), stringsAsFactors=FALSE)
+for (i in names(ccl)) {
+  if (ccl[i] == "character") {
+    if (!is.character(x[[i]]))
+      x[[i]] <- as.character(x[[i]])
+  } else {
+    if (!is.numeric(x[[i]]))
+      x[[i]] <- as.numeric(x[[i]])
+  }
+}
 x$date <- as.Date(x$date, "%d-%m-%Y")
 x$numtoday[!is.na(x$numtoday) & x$numtoday < 0] <- 0
 x$percentoday[!is.na(x$percentoday) & x$percentoday < 0] <- 0
@@ -265,7 +275,10 @@ for (i in cn) {
   all[[i]] <- tmp
   for (j in pr) {
     v <- z[[j]][[i]]
-    all[[i]][[j]] <- z[[j]][[i]][match(tmp$Date, z[[j]]$date)]
+    for (ii in 2:length(v))
+      if (is.na(v[ii]))
+        v[ii] <- v[ii-1]
+    all[[i]][[j]] <- v[match(tmp$Date, z[[j]]$date)]
   }
 }
 
