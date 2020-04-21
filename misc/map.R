@@ -13,7 +13,7 @@ d2d <- read.csv(paste0(f0, "time_series_covid19_deaths_global.csv"),
 #d2r <- read.csv(paste0(f0, "time_series_covid19_recovered_global.csv"),
 #                stringsAsFactors = FALSE, check.names=FALSE)
 
-st <- sort(unique(l1c$Province_State))
+st <- sort(unique(d1c$Province_State))
 cold <- grepl("/", colnames(d1c))
 d3c <- d3d <- matrix(NA, length(st), sum(cold))
 dimnames(d3c) <- dimnames(d3d) <- list(st, colnames(d1c)[cold])
@@ -82,7 +82,8 @@ l <- leaflet(qq) %>% addTiles() %>%
   addCircleMarkers(
     color="#F30",
     radius=~8*sqrt(vd)+2,
-    stroke = FALSE, fillOpacity = 0.5)
+    stroke = FALSE, fillOpacity = 0.5,
+    label=~paste0(Combined_Key, ": ", qq$Confirmed))
 
 library(htmlwidgets)
 saveWidget(l, "map.html")
