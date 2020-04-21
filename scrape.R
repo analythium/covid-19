@@ -268,6 +268,7 @@ for (i in names(z)) {
 }
 
 pr <- sort(unique(x$prname))
+pr <- pr[!(pr %in% c("Canada", "Repatriated travellers"))]
 tmp <- data.frame(Date=seq(min(x$date), max(x$date), 1))
 cn <- colnames(z[[1]])[5:ncol(z[[1]])]
 all <- list()
@@ -290,11 +291,18 @@ writeLines(toJSON(z, na="null"),
 writeLines(toJSON(all, dataframe="columns", na="null"),
     "_stats/api/v1/data/canada/index.json")
 
-
-ab <- data.frame(Date=json[[4L]]$x$data$x[[1]])
-for (i in 1:length(json[[4L]]$x$data$name)) {
-  nam <- gsub(" Zone", "", json[[4L]]$x$data$name[i])
-  ab[[nam]] <- json[[4L]]$x$data$y[[i]]
+abi <- 6
+for (iii in 1:length(json)) {
+  tmp <- try(sort(json[[iii]]$x$data$name))
+  cat(tmp, "\n")
+  if (!is.null(tmp) && !inherits(tmp, "try-error"))
+    if (all(tmp[1:3] == c("Calgary Zone", "Central Zone","Edmonton Zone")))
+    abi <- iii
+}
+ab <- data.frame(Date=json[[abi]]$x$data$x[[1]])
+for (i in 1:length(json[[abi]]$x$data$name)) {
+  nam <- gsub(" Zone", "", json[[abi]]$x$data$name[i])
+  ab[[nam]] <- json[[abi]]$x$data$y[[i]]
 }
 abr <- abd <- ab
 for (i in 2:ncol(ab)) {
