@@ -81,9 +81,19 @@ qq$vd <- qq$Deaths/max(qq$Deaths)
 l <- leaflet(qq) %>% addTiles() %>%
   addCircleMarkers(
     color="#F30",
-    radius=~8*sqrt(vd)+2,
+    radius=~20*sqrt(vd)+5,
     stroke = FALSE, fillOpacity = 0.5,
-    label=~paste0(Combined_Key, ": ", qq$Confirmed))
+    label=~paste0(Combined_Key, ": ", qq$Confirmed)) %>%
+  setView(lng = 10, lat = 25, zoom = 03) %>%
+    addProviderTiles("Stamen.TonerLite",
+                     group = "Toner",
+                     options = providerTileOptions(minZoom = 8, maxZoom = 10)) %>%
+    addProviderTiles("Esri.WorldTopoMap",
+                     group = "Topo") %>%
+    addProviderTiles("OpenStreetMap.Mapnik", group = "Mapnik") %>%
+    addProviderTiles("CartoDB.Positron",     group = "CartoDB") %>%
+    addLayersControl(baseGroups = c("Toner", "Topo", "Mapnik", "CartoDB"),
+                     options = layersControlOptions(collapsed = TRUE))
 
 library(htmlwidgets)
 saveWidget(l, "map.html")

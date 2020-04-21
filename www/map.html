@@ -3903,14 +3903,874 @@ function asArray(value) {
 
 },{}]},{},[13]);
 </script>
+<script>(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['leaflet'], factory);
+	} else if (typeof modules === 'object' && module.exports) {
+		// define a Common JS module that relies on 'leaflet'
+		module.exports = factory(require('leaflet'));
+	} else {
+		// Assume Leaflet is loaded into global object L already
+		factory(L);
+	}
+}(this, function (L) {
+	'use strict';
+
+	L.TileLayer.Provider = L.TileLayer.extend({
+		initialize: function (arg, options) {
+			var providers = L.TileLayer.Provider.providers;
+
+			var parts = arg.split('.');
+
+			var providerName = parts[0];
+			var variantName = parts[1];
+
+			if (!providers[providerName]) {
+				throw 'No such provider (' + providerName + ')';
+			}
+
+			var provider = {
+				url: providers[providerName].url,
+				options: providers[providerName].options
+			};
+
+			// overwrite values in provider from variant.
+			if (variantName && 'variants' in providers[providerName]) {
+				if (!(variantName in providers[providerName].variants)) {
+					throw 'No such variant of ' + providerName + ' (' + variantName + ')';
+				}
+				var variant = providers[providerName].variants[variantName];
+				var variantOptions;
+				if (typeof variant === 'string') {
+					variantOptions = {
+						variant: variant
+					};
+				} else {
+					variantOptions = variant.options;
+				}
+				provider = {
+					url: variant.url || provider.url,
+					options: L.Util.extend({}, provider.options, variantOptions)
+				};
+			}
+
+			// replace attribution placeholders with their values from toplevel provider attribution,
+			// recursively
+			var attributionReplacer = function (attr) {
+				if (attr.indexOf('{attribution.') === -1) {
+					return attr;
+				}
+				return attr.replace(/\{attribution.(\w*)\}/g,
+					function (match, attributionName) {
+						return attributionReplacer(providers[attributionName].options.attribution);
+					}
+				);
+			};
+			provider.options.attribution = attributionReplacer(provider.options.attribution);
+
+			// Compute final options combining provider options with any user overrides
+			var layerOpts = L.Util.extend({}, provider.options, options);
+			L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
+		}
+	});
+
+	/**
+	 * Definition of providers.
+	 * see http://leafletjs.com/reference.html#tilelayer for options in the options map.
+	 */
+
+	L.TileLayer.Provider.providers = {
+		OpenStreetMap: {
+			url: '//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution:
+					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			},
+			variants: {
+				Mapnik: {},
+				DE: {
+					url: '//{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18
+					}
+				},
+				CH: {
+					url: '//tile.osm.ch/switzerland/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18,
+						bounds: [[45, 5], [48, 11]]
+					}
+				},
+				France: {
+					url: '//{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 20,
+						attribution: '&copy; Openstreetmap France | {attribution.OpenStreetMap}'
+					}
+				},
+				HOT: {
+					url: '//{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+					options: {
+						attribution:
+							'{attribution.OpenStreetMap}, ' +
+							'Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> ' +
+							'hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+					}
+				},
+				BZH: {
+					url: '//tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',
+					options: {
+						attribution: '{attribution.OpenStreetMap}, Tiles courtesy of <a href="http://www.openstreetmap.bzh/" target="_blank">Breton OpenStreetMap Team</a>',
+						bounds: [[46.2, -5.5], [50, 0.7]]
+					}
+				}
+			}
+		},
+		OpenSeaMap: {
+			url: '//tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+			options: {
+				attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'
+			}
+		},
+		OpenPtMap: {
+			url: 'http://openptmap.org/tiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: &copy; <a href="http://www.openptmap.org">OpenPtMap</a> contributors'
+			}
+		},
+		OpenTopoMap: {
+			url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: {attribution.OpenStreetMap}, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenRailwayMap: {
+			url: 'https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://www.OpenRailwayMap.org">OpenRailwayMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenFireMap: {
+			url: 'http://openfiremap.org/hytiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="http://www.openfiremap.org">OpenFireMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		SafeCast: {
+			url: '//s3.amazonaws.com/te512.safecast.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 16,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://blog.safecast.org/about/">SafeCast</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		Thunderforest: {
+			url: 'https://{s}.tile.thunderforest.com/{variant}/{z}/{x}/{y}.png?apikey={apikey}',
+			options: {
+				attribution:
+					'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',
+				variant: 'cycle',
+				apikey: '<insert your api key here>',
+				maxZoom: 22
+			},
+			variants: {
+				OpenCycleMap: 'cycle',
+				Transport: {
+					options: {
+						variant: 'transport'
+					}
+				},
+				TransportDark: {
+					options: {
+						variant: 'transport-dark'
+					}
+				},
+				SpinalMap: {
+					options: {
+						variant: 'spinal-map'
+					}
+				},
+				Landscape: 'landscape',
+				Outdoors: 'outdoors',
+				Pioneer: 'pioneer',
+				MobileAtlas: 'mobile-atlas',
+				Neighbourhood: 'neighbourhood'
+			}
+		},
+		OpenMapSurfer: {
+			url: 'https://maps.heigit.org/openmapsurfer/tiles/{variant}/webmercator/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				variant: 'roads',
+				attribution: 'Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> | Map data '
+			},
+			variants: {
+				Roads: {
+					options: {
+						variant: 'roads',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				Hybrid: {
+					options: {
+						variant: 'hybrid',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				AdminBounds: {
+					options: {
+						variant: 'adminb',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				ContourLines: {
+					options: {
+						variant: 'asterc',
+						maxZoom: 18,
+						minZoom: 13,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>'
+					}
+				},
+				Hillshade: {
+					options: {
+						variant: 'asterh',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>, <a href="http://srtm.csi.cgiar.org/">SRTM</a>'
+					}
+				},
+				ElementsAtRisk: {
+					options: {
+						variant: 'elements_at_risk',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				}
+			}
+		},
+		Hydda: {
+			url: '//{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 18,
+				variant: 'full',
+				attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'
+			},
+			variants: {
+				Full: 'full',
+				Base: 'base',
+				RoadsAndLabels: 'roads_and_labels'
+			}
+		},
+		MapBox: {
+			url: 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}{r}.png?access_token={accessToken}',
+			options: {
+				attribution:
+					'<a href="https://www.mapbox.com/about/maps/" target="_blank">&copy; Mapbox</a> ' +
+					'{attribution.OpenStreetMap} ' +
+					'<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+				subdomains: 'abcd',
+				id: 'mapbox.streets',
+				accessToken: '<insert your access token here>',
+			}
+		},
+		Stamen: {
+			url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}',
+			options: {
+				attribution:
+					'Map tiles by <a href="http://stamen.com">Stamen Design</a>, ' +
+					'<a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; ' +
+					'Map data {attribution.OpenStreetMap}',
+				subdomains: 'abcd',
+				minZoom: 0,
+				maxZoom: 20,
+				variant: 'toner',
+				ext: 'png'
+			},
+			variants: {
+				Toner: 'toner',
+				TonerBackground: 'toner-background',
+				TonerHybrid: 'toner-hybrid',
+				TonerLines: 'toner-lines',
+				TonerLabels: 'toner-labels',
+				TonerLite: 'toner-lite',
+				Watercolor: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'watercolor',
+						ext: 'jpg',
+						minZoom: 1,
+						maxZoom: 16
+					}
+				},
+				Terrain: {
+					options: {
+						variant: 'terrain',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainBackground: {
+					options: {
+						variant: 'terrain-background',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainLabels: {
+					options: {
+						variant: 'terrain-labels',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TopOSMRelief: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'toposm-color-relief',
+						ext: 'jpg',
+						bounds: [[22, -132], [51, -56]]
+					}
+				},
+				TopOSMFeatures: {
+					options: {
+						variant: 'toposm-features',
+						bounds: [[22, -132], [51, -56]],
+						opacity: 0.9
+					}
+				}
+			}
+		},
+		TomTom: {
+			url: 'https://{s}.api.tomtom.com/map/1/tile/{variant}/{style}/{z}/{x}/{y}.{ext}?key={apikey}',
+			options: {
+				variant: 'basic',
+				maxZoom: 22,
+				attribution:
+					'<a href="https://tomtom.com" target="_blank">&copy;  1992 - ' + new Date().getFullYear() + ' TomTom.</a> ',
+				subdomains: 'abcd',
+				style: 'main',
+				ext: 'png',
+				apikey: '<insert your API key here>',
+			},
+			variants: {
+				Basic: 'basic',
+				Hybrid: 'hybrid',
+				Labels: 'labels'
+			}
+		},
+		Esri: {
+			url: '//server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{z}/{y}/{x}',
+			options: {
+				variant: 'World_Street_Map',
+				attribution: 'Tiles &copy; Esri'
+			},
+			variants: {
+				WorldStreetMap: {
+					options: {
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+					}
+				},
+				DeLorme: {
+					options: {
+						variant: 'Specialty/DeLorme_World_Base_Map',
+						minZoom: 1,
+						maxZoom: 11,
+						attribution: '{attribution.Esri} &mdash; Copyright: &copy;2012 DeLorme'
+					}
+				},
+				WorldTopoMap: {
+					options: {
+						variant: 'World_Topo_Map',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+					}
+				},
+				WorldImagery: {
+					options: {
+						variant: 'World_Imagery',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+					}
+				},
+				WorldTerrain: {
+					options: {
+						variant: 'World_Terrain_Base',
+						maxZoom: 13,
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: USGS, Esri, TANA, DeLorme, and NPS'
+					}
+				},
+				WorldShadedRelief: {
+					options: {
+						variant: 'World_Shaded_Relief',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Source: Esri'
+					}
+				},
+				WorldPhysical: {
+					options: {
+						variant: 'World_Physical_Map',
+						maxZoom: 8,
+						attribution: '{attribution.Esri} &mdash; Source: US National Park Service'
+					}
+				},
+				OceanBasemap: {
+					options: {
+						variant: 'Ocean_Basemap',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'
+					}
+				},
+				NatGeoWorldMap: {
+					options: {
+						variant: 'NatGeo_World_Map',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC'
+					}
+				},
+				WorldGrayCanvas: {
+					options: {
+						variant: 'Canvas/World_Light_Gray_Base',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; Esri, DeLorme, NAVTEQ'
+					}
+				}
+			}
+		},
+		OpenWeatherMap: {
+			url: 'http://{s}.tile.openweathermap.org/map/{variant}/{z}/{x}/{y}.png?appid={apiKey}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data &copy; <a href="http://openweathermap.org">OpenWeatherMap</a>',
+				apiKey:'<insert your api key here>',
+				opacity: 0.5
+			},
+			variants: {
+				Clouds: 'clouds',
+				CloudsClassic: 'clouds_cls',
+				Precipitation: 'precipitation',
+				PrecipitationClassic: 'precipitation_cls',
+				Rain: 'rain',
+				RainClassic: 'rain_cls',
+				Pressure: 'pressure',
+				PressureContour: 'pressure_cntr',
+				Wind: 'wind',
+				Temperature: 'temp',
+				Snow: 'snow'
+			}
+		},
+		HERE: {
+			/*
+			 * HERE maps, formerly Nokia maps.
+			 * These basemaps are free, but you need an API key. Please sign up at
+			 * https://developer.here.com/plans
+			 */
+			url:
+				'https://{s}.{base}.maps.api.here.com/maptile/2.1/' +
+				'{type}/{mapID}/{variant}/{z}/{x}/{y}/{size}/{format}?' +
+				'app_id={app_id}&app_code={app_code}&lg={language}',
+			options: {
+				attribution:
+					'Map &copy; 1987-' + new Date().getFullYear() + ' <a href="http://developer.here.com">HERE</a>',
+				subdomains: '1234',
+				mapID: 'newest',
+				'app_id': '<insert your app_id here>',
+				'app_code': '<insert your app_code here>',
+				base: 'base',
+				variant: 'normal.day',
+				maxZoom: 20,
+				type: 'maptile',
+				language: 'eng',
+				format: 'png8',
+				size: '256'
+			},
+			variants: {
+				normalDay: 'normal.day',
+				normalDayCustom: 'normal.day.custom',
+				normalDayGrey: 'normal.day.grey',
+				normalDayMobile: 'normal.day.mobile',
+				normalDayGreyMobile: 'normal.day.grey.mobile',
+				normalDayTransit: 'normal.day.transit',
+				normalDayTransitMobile: 'normal.day.transit.mobile',
+				normalDayTraffic: {
+					options: {
+						variant: 'normal.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				normalNight: 'normal.night',
+				normalNightMobile: 'normal.night.mobile',
+				normalNightGrey: 'normal.night.grey',
+				normalNightGreyMobile: 'normal.night.grey.mobile',
+				normalNightTransit: 'normal.night.transit',
+				normalNightTransitMobile: 'normal.night.transit.mobile',
+				reducedDay: 'reduced.day',
+				reducedNight: 'reduced.night',
+				basicMap: {
+					options: {
+						type: 'basetile'
+					}
+				},
+				mapLabels: {
+					options: {
+						type: 'labeltile',
+						format: 'png'
+					}
+				},
+				trafficFlow: {
+					options: {
+						base: 'traffic',
+						type: 'flowtile'
+					}
+				},
+				carnavDayGrey: 'carnav.day.grey',
+				hybridDay: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day'
+					}
+				},
+				hybridDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.mobile'
+					}
+				},
+				hybridDayTransit: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.transit'
+					}
+				},
+				hybridDayGrey: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.grey.day'
+					}
+				},
+				hybridDayTraffic: {
+					options: {
+						variant: 'hybrid.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				pedestrianDay: 'pedestrian.day',
+				pedestrianNight: 'pedestrian.night',
+				satelliteDay: {
+					options: {
+						base: 'aerial',
+						variant: 'satellite.day'
+					}
+				},
+				terrainDay: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day'
+					}
+				},
+				terrainDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day.mobile'
+					}
+				}
+			}
+		},
+		FreeMapSK: {
+			url: 'http://t{s}.freemap.sk/T/{z}/{x}/{y}.jpeg',
+			options: {
+				minZoom: 8,
+				maxZoom: 16,
+				subdomains: '1234',
+				bounds: [[47.204642, 15.996093], [49.830896, 22.576904]],
+				attribution:
+					'{attribution.OpenStreetMap}, vizualization CC-By-SA 2.0 <a href="http://freemap.sk">Freemap.sk</a>'
+			}
+		},
+		MtbMap: {
+			url: 'http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png',
+			options: {
+				attribution:
+					'{attribution.OpenStreetMap} &amp; USGS'
+			}
+		},
+		CartoDB: {
+			url: 'https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '{attribution.OpenStreetMap} &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19,
+				variant: 'light_all'
+			},
+			variants: {
+				Positron: 'light_all',
+				PositronNoLabels: 'light_nolabels',
+				PositronOnlyLabels: 'light_only_labels',
+				DarkMatter: 'dark_all',
+				DarkMatterNoLabels: 'dark_nolabels',
+				DarkMatterOnlyLabels: 'dark_only_labels',
+				Voyager: 'rastertiles/voyager',
+				VoyagerNoLabels: 'rastertiles/voyager_nolabels',
+				VoyagerOnlyLabels: 'rastertiles/voyager_only_labels',
+				VoyagerLabelsUnder: 'rastertiles/voyager_labels_under'
+			}
+		},
+		HikeBike: {
+			url: 'https://tiles.wmflabs.org/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: '{attribution.OpenStreetMap}',
+				variant: 'hikebike'
+			},
+			variants: {
+				HikeBike: {},
+				HillShading: {
+					options: {
+						maxZoom: 15,
+						variant: 'hillshading'
+					}
+				}
+			}
+		},
+		BasemapAT: {
+			url: '//maps{s}.wien.gv.at/basemap/{variant}/normal/google3857/{z}/{y}/{x}.{format}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+				subdomains: ['', '1', '2', '3', '4'],
+				format: 'png',
+				bounds: [[46.358770, 8.782379], [49.037872, 17.189532]],
+				variant: 'geolandbasemap'
+			},
+			variants: {
+				basemap: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'geolandbasemap'
+					}
+				},
+				grau: 'bmapgrau',
+				overlay: 'bmapoverlay',
+				highdpi: {
+					options: {
+						variant: 'bmaphidpi',
+						format: 'jpeg'
+					}
+				},
+				orthofoto: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'bmaporthofoto30cm',
+						format: 'jpeg'
+					}
+				}
+			}
+		},
+		nlmaps: {
+			url: '//geodata.nationaalgeoregister.nl/tiles/service/wmts/{variant}/EPSG:3857/{z}/{x}/{y}.png',
+			options: {
+				minZoom: 6,
+				maxZoom: 19,
+				bounds: [[50.5, 3.25], [54, 7.6]],
+				attribution: 'Kaartgegevens &copy; <a href="kadaster.nl">Kadaster</a>'
+			},
+			variants: {
+				'standaard': 'brtachtergrondkaart',
+				'pastel': 'brtachtergrondkaartpastel',
+				'grijs': 'brtachtergrondkaartgrijs',
+				'luchtfoto': {
+					'url': '//geodata.nationaalgeoregister.nl/luchtfoto/rgb/wmts/1.0.0/2016_ortho25/EPSG:3857/{z}/{x}/{y}.png',
+				}
+			}
+		},
+		NASAGIBS: {
+			url: 'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/{variant}/default/{time}/{tilematrixset}{maxZoom}/{z}/{y}/{x}.{format}',
+			options: {
+				attribution:
+					'Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System ' +
+					'(<a href="https://earthdata.nasa.gov">ESDIS</a>) with funding provided by NASA/HQ.',
+				bounds: [[-85.0511287776, -179.999999975], [85.0511287776, 179.999999975]],
+				minZoom: 1,
+				maxZoom: 9,
+				format: 'jpg',
+				time: '',
+				tilematrixset: 'GoogleMapsCompatible_Level'
+			},
+			variants: {
+				ModisTerraTrueColorCR: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+				ModisTerraBands367CR: 'MODIS_Terra_CorrectedReflectance_Bands367',
+				ViirsEarthAtNight2012: {
+					options: {
+						variant: 'VIIRS_CityLights_2012',
+						maxZoom: 8
+					}
+				},
+				ModisTerraLSTDay: {
+					options: {
+						variant: 'MODIS_Terra_Land_Surface_Temp_Day',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				},
+				ModisTerraSnowCover: {
+					options: {
+						variant: 'MODIS_Terra_Snow_Cover',
+						format: 'png',
+						maxZoom: 8,
+						opacity: 0.75
+					}
+				},
+				ModisTerraAOD: {
+					options: {
+						variant: 'MODIS_Terra_Aerosol',
+						format: 'png',
+						maxZoom: 6,
+						opacity: 0.75
+					}
+				},
+				ModisTerraChlorophyll: {
+					options: {
+						variant: 'MODIS_Terra_Chlorophyll_A',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				}
+			}
+		},
+		NLS: {
+			// NLS maps are copyright National library of Scotland.
+			// http://maps.nls.uk/projects/api/index.html
+			// Please contact NLS for anything other than non-commercial low volume usage
+			//
+			// Map sources: Ordnance Survey 1:1m to 1:63K, 1920s-1940s
+			//   z0-9  - 1:1m
+			//  z10-11 - quarter inch (1:253440)
+			//  z12-18 - one inch (1:63360)
+			url: '//nls-{s}.tileserver.com/nls/{z}/{x}/{y}.jpg',
+			options: {
+				attribution: '<a href="http://geo.nls.uk/maps/">National Library of Scotland Historic Maps</a>',
+				bounds: [[49.6, -12], [61.7, 3]],
+				minZoom: 1,
+				maxZoom: 18,
+				subdomains: '0123',
+			}
+		},
+		JusticeMap: {
+			// Justice Map (http://www.justicemap.org/)
+			// Visualize race and income data for your community, county and country.
+			// Includes tools for data journalists, bloggers and community activists.
+			url: 'http://www.justicemap.org/tile/{size}/{variant}/{z}/{x}/{y}.png',
+			options: {
+				attribution: '<a href="http://www.justicemap.org/terms.php">Justice Map</a>',
+				// one of 'county', 'tract', 'block'
+				size: 'county',
+				// Bounds for USA, including Alaska and Hawaii
+				bounds: [[14, -180], [72, -56]]
+			},
+			variants: {
+				income: 'income',
+				americanIndian: 'indian',
+				asian: 'asian',
+				black: 'black',
+				hispanic: 'hispanic',
+				multi: 'multi',
+				nonWhite: 'nonwhite',
+				white: 'white',
+				plurality: 'plural'
+			}
+		},
+		Wikimedia: {
+			url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
+				minZoom: 1,
+				maxZoom: 19
+			}
+		},
+		GeoportailFrance: {
+			url: 'https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER={variant}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+			options: {
+				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+				bounds: [[-75, -180], [81, 180]],
+				minZoom: 2,
+				maxZoom: 18,
+				// Get your own geoportail apikey here : http://professionnels.ign.fr/ign/contrats/
+				// NB : 'choisirgeoportail' is a demonstration key that comes with no guarantee
+				apikey: 'choisirgeoportail',
+				format: 'image/jpeg',
+				style : 'normal',
+				variant: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'
+			},
+			variants: {
+				parcels: {
+					options : {
+						variant: 'CADASTRALPARCELS.PARCELS',
+						maxZoom: 20,
+						style : 'bdparcellaire',
+						format: 'image/png'
+					}
+				},
+				ignMaps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS',
+				maps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD',
+				orthos: {
+					options: {
+						maxZoom: 19,
+						variant: 'ORTHOIMAGERY.ORTHOPHOTOS'
+					}
+				}
+			}
+		},
+		OneMapSG: {
+			url: '//maps-{s}.onemap.sg/v3/{variant}/{z}/{x}/{y}.png',
+			options: {
+				variant: 'Default',
+				minZoom: 11,
+				maxZoom: 18,
+				bounds: [[1.56073, 104.11475], [1.16, 103.502]],
+				attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+			},
+			variants: {
+				Default: 'Default',
+				Night: 'Night',
+				Original: 'Original',
+				Grey: 'Grey',
+				LandLot: 'LandLot'
+			}
+		}
+	};
+
+	L.tileLayer.provider = function (provider, options) {
+		return new L.TileLayer.Provider(provider, options);
+	};
+
+	return L;
+}));
+</script>
+<script>LeafletWidget.methods.addProviderTiles = function(provider, layerId, group, options) {
+  this.layerManager.addLayer(L.tileLayer.provider(provider, options), "tile", layerId, group);
+};
+</script>
 </head>
 <body style="background-color: white;">
 <div id="htmlwidget_container">
-<div id="htmlwidget-a3389aba944c6cb1e023" class="leaflet html-widget" style="width:100%;height:400px;">
+<div id="htmlwidget-6dfd29e72ccf2a59ba51" class="leaflet html-widget" style="width:100%;height:400px;">
 
 </div>
 </div>
-<script type="application/json" data-for="htmlwidget-a3389aba944c6cb1e023">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircleMarkers","args":[[32.85044126,59.56149996,-14.271,33.21498827,34.9459153,37.982716535,38.87189877,41.474230515,38.66143781,29.31829741,32.73709786,13.4443,20.86399628,43.73947896,39.76302483,39.77682955,42.03621213,38.4808095,37.55716,30.77597786,44.446713025,39.03434575,42.13440424,43.70639106,45.17297924,32.75415613,38.41472379,46.909866005,41.22703692,39.15509045,43.294231355,40.28047017,34.64048375,42.617764425,35.651075225,47.35423935,15.0979,40.3162983,35.49447108,44.675842155,40.77129231,18.2208,41.5642026,34.01293543,44.071478135,35.9278914,31.772055605,39.64834818,44.15280289,18.3358,37.37373208,47.12521214,38.84315422,44.397069855,42.97272268,33,41.1533,28.0339,42.5063,-11.2027,17.0608,-38.4161,40.0691,-35.4735,-33.8688,-12.4634,-28.0167,-34.9285,-41.4545,-37.8136,-31.9505,47.5162,40.1431,25.0343,26.0275,23.685,13.1939,53.7098,50.8333,9.3077,27.5142,-16.2902,43.9159,-14.235,4.5353,42.7339,12.2383,16.5388,11.55,3.848,53.9333,49.2827,37.6489,53.7609,46.5653,53.1355,44.682,51.2538,46.5107,52.9399,52.9399,6.6111,15.4542,-35.6751,31.8257,40.1824,30.0572,26.0789,37.8099,23.3417,23.8298,26.8154,19.1959,39.549,47.862,33.882,22.3,30.9756,27.6104,44.0935,32.9711,27.614,43.6661,41.2956,22.1667,37.2692,35.7452,35.1917,36.3427,31.202,37.5777,30.6171,39.3054,31.6927,41.1129,24.974,29.1832,4.5709,-4.0383,-4.0383,9.7489,7.54,45.1,22,35.1264,49.8175,61.8926,71.7069,56.2639,11.8251,18.7357,-1.8312,26,13.7942,1.5,15.1794,58.5953,-26.5225,9.145,-17.7134,64,3.9339,-17.6797,16.25,-12.8275,-20.9043,-21.1351,17.9,18.0708,14.6415,46.2276,-0.8037,13.4432,42.3154,51,7.9465,39.0742,15.7835,9.9456,5,18.9712,41.9029,15.2,47.1625,64.9631,21,-0.7893,32,33,53.1424,31,43,18.1096,36,31.24,48.0196,-0.0236,36,29.5,41.2044,56.8796,33.8547,6.4281,47.14,55.1694,49.8153,-18.7669,2.5,3.2028,35.9375,21.0079,-20.2,23.6345,47.4116,43.7333,46.8625,42.5,31.7917,-22.9576,28.1667,12.5186,12.1696,18.0425,52.1326,-40.9006,12.8654,17.6078,9.082,41.6086,60.472,21,30.3753,8.538,-6.315,-23.4425,-9.19,13,51.9194,39.3999,25.3548,45.9432,60,-1.9403,13.9094,12.9843,43.9424,24,14.4974,44.0165,-4.6796,1.2833,48.669,46.1512,5.1521,-30.5595,40,7,12.8628,3.9193,63,46.8182,23.7,-6.369,15,8.6195,10.6918,34,38.9637,1,48.3794,24,32.3078,19.3133,49.3723,36.1408,54.2361,16.7425,55.3781,-32.5228,41.3775,6.4238,16,-15.4167,-20,15.415,12.1165,-18.665695,34.802075,-8.874217,13.1939,19.85627,26.3351,31.9522,11.8037,17.570692,17.357822,64.8255,64.2823,42.602636,21.9162,18.2206,18.4207,21.694,-22.3285,-3.3731,8.460555,12.1784,-13.254308,-51.7963,46.8852,6.877,24.2155,0.18636,15.552727],[-86.65158371,-146.5692662,-170.132,-110.8479088,-92.42320562,-120.80112585,-105.43381075,-72.43399837,-75.39031349,-82.28467476,-83.66879087,144.7937,-156.5689097,-114.47704375,-89.077688295,-86.125891085,-93.32780803,-98.07578384,-84.85960805,-91.762533265,-69.41414677,-76.585749845,-71.07850442,-84.89083249,-94.32603968,-89.530957415,-92.54382516,-109.8945161,-98.52150266,-117.6319999,-71.36158737,-74.61683016,-105.7417604,-74.964273065,-79.24596583,-99.84097493,145.6739,-82.95448222,-97.06826283,-121.65242485,-77.26297447,-66.5901,-71.28652315,-80.96377352,-98.816762155,-86.00778595,-98.523751165,-111.5758676,-72.62980836,-64.8963,-78.15826963,-120.7380126,-80.66591062,-89.56093696,-106.797885,65,20.1683,1.6596,1.5218,17.8739,-61.7964,-63.6167,45.0382,149.0124,151.2093,130.8456,153.4,138.6007,145.9707,144.9631,115.8605,14.5501,47.5769,-77.3963,50.55,90.3563,-59.5432,27.9534,4,2.3158,90.4336,-63.5887,17.6791,-51.9253,114.7277,25.4858,-1.5616,-23.0418,104.9167,11.5021,-116.5765,-123.1207,-122.6655,-98.8139,-66.4619,-57.6604,-63.7443,-85.3232,-63.4168,-73.5491,-106.4509,20.9394,18.7322,-71.543,117.2264,116.4142,107.874,117.9874,101.0583,113.4244,108.7881,106.8748,109.7453,116.1306,127.7615,113.614,114.2,112.2707,111.7088,113.9448,119.455,115.7221,126.1923,122.6085,113.55,106.1655,95.9956,108.8701,118.1498,121.4491,112.2922,102.7103,117.323,88.0924,85.2401,101.487,120.0934,-74.2973,21.7587,21.7587,-83.7534,-5.5471,15.2,-80,33.4299,15.473,-6.9118,-42.6043,9.5018,42.5903,-70.1627,-78.1834,30,-88.8965,10,39.7823,25.0136,31.4659,40.4897,178.065,26,-53.1258,149.4068,-61.5833,45.1662,165.618,55.2471,-62.8333,-63.0501,-61.0242,2.2137,11.6094,-15.3101,43.3569,9,-1.0232,21.8243,-90.2308,-9.6966,-58.75,-72.2852,12.4534,-86.2419,19.5033,-19.0208,78,113.9213,53,44,-7.6921,35,12,-77.2975,138,36.51,66.9237,37.9062,128,47.75,74.7661,24.6032,35.8623,-9.4295,9.55,23.8813,6.1296,46.8691,112.5,73.2207,14.3754,10.9408,57.5,-102.5528,28.3699,7.4167,103.8467,19.3,-7.0926,18.4904,84.25,-70.0358,-68.99,-63.0548,5.2913,174.886,-85.2072,8.0817,8.6753,21.7453,8.4689,57,69.3451,-80.7821,143.9555,-58.4438,-75.0152,122,19.1451,-8.2245,51.1839,24.9668,90,29.8739,-60.9789,-61.2872,12.4578,45,-14.4524,21.0059,55.492,103.8333,19.699,14.9955,46.1996,22.9375,-4,81,30.2176,-56.0278,16,8.2275,121,34.8888,101,0.8248,-61.2225,9,35.2433,32,31.1656,54,-64.7505,-81.2546,-2.3644,-5.3536,-4.5481,-62.1874,-3.436,-55.7658,64.5853,-66.5897,108,28.2833,30,-61.371,-61.679,35.529562,38.996815,125.727539,-59.5432,102.495496,17.228331,35.2332,-15.1804,-3.996166,-62.782998,-124.8457,-135,20.902977,95.956,-63.0686,-64.64,-71.7979,24.6849,29.9189,-11.779889,-68.2385,34.301525,-59.5236,-56.3159,31.307,-12.8858,6.613081,48.516388],[2.64551328530829,2.15455270602624,2,2.69881830136996,2.32172711326032,3.76743556640125,3.05579597959784,3.72948705900588,2.42168947355744,3.43326283313389,3.35031075648879,2.11519678559374,2.16291285652845,2.34172889081544,3.85033436115521,3.22130326037846,2.44615523214119,2.49681744036117,2.62248915075285,3.85463247231494,2.30039646468573,3.10612910896795,4.12786892431788,4.51909848525273,2.5963589726149,2.64961182353306,2.72674473961838,2.16291285652845,2.27260534973168,2.64756579695945,2.31757562174164,5.40250043442616,2.38206451486946,8.96878667523788,2.72856844321259,2.15455270602624,2.07285684432126,3.11806180711466,2.60956409303014,2.44317088271313,3.84026639640039,2.40564974140016,2.63095878021778,2.56434668942693,2.13630267486584,2.62673827278176,3.14038999569918,2.26769313928471,2.31757562174164,2.08923104642824,2.8574232253541,3.29922364706612,2.21857053296378,2.76412902973892,2.07285684432126,2.30910541205249,2.2626890879688,3.00953404834845,2.31336913639088,2.07285684432126,2.08923104642824,2.60079292937147,2.24163881602295,2.08923104642824,2.2626890879688,2,2.12619175604356,2.10303513735083,2.13630267486584,2.192761091383,2.13630267486584,3.11687427432378,2.22455987567305,2.15455270602624,2.13630267486584,2.51774515749047,2.11519678559374,2.36790902950802,5.93292016110341,2.05151756867541,2,2.29594590065325,2.3606229807279,4.62031542286781,2.05151756867541,2.33782328951054,2.31757562174164,2.05151756867541,2,2.33387200399778,2.39571395357169,2.46651142573633,2,2.12619175604356,2,2.08923104642824,2.15455270602624,3.28690845304127,2,3.57865836374128,2.10303513735083,2,2,2.60738317693975,2.12619175604356,2.14571368864252,2.12619175604356,2.05151756867541,2.07285684432126,2.14571368864252,2.07285684432126,2.07285684432126,2.12619175604356,2.12619175604356,2.18574923544645,2.24163881602295,2.10303513735083,5.46050837141079,2.10303513735083,2.05151756867541,2,2.05151756867541,2.05151756867541,2.07285684432126,2,2,2,2.08923104642824,2.13630267486584,2.13630267486584,2,2.08923104642824,2.08923104642824,2,2.08923104642824,2.07285684432126,2.05151756867541,2.70824947422552,2.12619175604356,2.25758784337707,2.12619175604356,2.15455270602624,2.35318665669109,2.30910541205249,2.17846209285648,2.71755669960768,2,2,2.98289256642336,2.07285684432126,2.78974937310715,3.16000360356709,2.81456428264227,2.13630267486584,2,2,2.32582571305691,2.05151756867541,2.08923104642824,2,2.50999791024881,2.05151756867541,2,2.14571368864252,2.10303513735083,2,2,2,2.07285684432126,2.17846209285648,9.33379325542463,2.05151756867541,2.05151756867541,2.10303513735083,5.59221925101785,2.15455270602624,2.55486119555996,2.13630267486584,2.11519678559374,2.13630267486584,2.08923104642824,2,2.34940915068498,2.72674473961838,2.16291285652845,3.25347654556352,3.25135739519667,5.71819820968648,2.46651142573633,3.35031075648879,2.68539667285012,10,2.11519678559374,2.79142790714338,2.13630267486584,2.22455987567305,2.192761091383,2.79142790714338,2.15455270602624,2.13630267486584,2.11519678559374,2.23608315807517,2.14571368864252,2.05151756867541,2.31336913639088,2.44615523214119,2,2.48601577085329,2,2.08923104642824,2.05151756867541,2.15455270602624,3.349327639681,2.43102690374944,2.08923104642824,2,2.11519678559374,2.61606051907124,2,2,2.07285684432126,2.05151756867541,2.16291285652845,5.15521451223686,2.17846209285648,2.07285684432126,2.23039357118748,2.24163881602295,2.37857526813067,2.69309800077833,2.13630267486584,2.68345778163087,2.578283274149,2,2.14571368864252,3.08676430176493,3.0658037481604,3.00426229404768,3.39668679861885,2.15455270602624,3.12633947977689,3.03677107034367,2,2,2,2.32172711326032,2.52284621818398,2.11519678559374,2.57598392796871,2,2.17086444540772,2.18574923544645,2.45206483045179,2.14571368864252,2.39234611399772,9.43925108221107,2.13630267486584,2.17846209285648,2.05151756867541,4.04778285321399,3.94747312476991,2.12619175604356,2.16291285652845,2.35318665669109,2.12619175604356,2.14571368864252,2.31757562174164,4.38320963156073,2,2.63305848246125,2.33782328951054,2.11519678559374,2.05151756867541,2.25238351208711,2,2.15455270602624,2,8.61935605596727,2.16291285652845,2.11519678559374,2.15455270602624,2,2.08923104642824,2.08923104642824,2,2,2,2.08923104642824,2,2.07285684432126,2,2.05151756867541,2.08923104642824,2,2.192761091383,2,2,2,2.17846209285648,2.11519678559374,2,2.05151756867541,2.05151756867541,2.05151756867541,2.05151756867541,2,2,2.07285684432126,2,2,2,2,2,2],null,null,{"interactive":true,"className":"","stroke":false,"color":"#F30","weight":5,"opacity":0.5,"fill":true,"fillColor":"#F30","fillOpacity":0.5},null,null,null,null,["Alabama, US: 5079","Alaska, US: 321","American Samoa, US: 0","Arizona, US: 5068","Arkansas, US: 1973","California, US: 33686","Colorado, US: 9730","Connecticut, US: 19815","Delaware, US: 2745","Florida, US: 27059","Georgia, US: 19407","Guam, US: 136","Hawaii, US: 584","Idaho, US: 1672","Illinois, US: 31513","Indiana, US: 11688","Iowa, US: 3159","Kansas, US: 2048","Kentucky, US: 3050","Louisiana, US: 24523","Maine, US: 875","Maryland, US: 13684","Massachusetts, US: 38077","Michigan, US: 32000","Minnesota, US: 2470","Mississippi, US: 4512","Missouri, US: 5890","Montana, US: 433","Nebraska, US: 1648","Nevada, US: 3830","New Hampshire, US: 1447","New Jersey, US: 88722","New Mexico, US: 1971","New York, US: 253060","North Carolina, US: 6895","North Dakota, US: 627","Northern Mariana Islands, US: 14","Ohio, US: 12919","Oklahoma, US: 2680","Oregon, US: 1957","Pennsylvania, US: 33914","Puerto Rico, US: 1252","Rhode Island, US: 5090","South Carolina, US: 4446","South Dakota, US: 1685","Tennessee, US: 7238","Texas, US: 19751","Utah, US: 3213","Vermont, US: 816","Virgin Islands, US: 53","Virginia, US: 8990","Washington, US: 12114","West Virginia, US: 902","Wisconsin, US: 4499","Wyoming, US: 317","Afghanistan: 1026","Albania: 584","Algeria: 2718","Andorra: 717","Angola: 24","Antigua and Barbuda: 23","Argentina: 2941","Armenia: 1339","Australia, Australian Capital Territory: 103","Australia, New South Wales: 2926","Australia, Northern Territory: 28","Australia, Queensland: 1015","Australia, South Australia: 435","Australia, Tasmania: 180","Australia, Victoria: 1319","Australia, Western Australia: 541","Austria: 14795","Azerbaijan: 1436","Bahamas: 60","Bahrain: 1907","Bangladesh: 2948","Barbados: 75","Belarus: 6264","Belgium: 39983","Benin: 54","Bhutan: 5","Bolivia: 564","Bosnia and Herzegovina: 1309","Brazil: 40743","Brunei: 138","Bulgaria: 929","Burkina Faso: 581","Cabo Verde: 67","Cambodia: 122","Cameroon: 1163","Canada, Alberta: 2908","Canada, British Columbia: 1647","Canada, Grand Princess: 13","Canada, Manitoba: 254","Canada, New Brunswick: 118","Canada, Newfoundland and Labrador: 257","Canada, Nova Scotia: 721","Canada, Ontario: 12063","Canada, Prince Edward Island: 26","Canada, Quebec: 19319","Canada, Saskatchewan: 316","Central African Republic: 12","Chad: 33","Chile: 10507","China, Anhui: 991","China, Beijing: 593","China, Chongqing: 579","China, Fujian: 355","China, Gansu: 139","China, Guangdong: 1581","China, Guangxi: 254","China, Guizhou: 147","China, Hainan: 168","China, Hebei: 328","China, Heilongjiang: 905","China, Henan: 1276","China, Hong Kong: 1025","China, Hubei: 68128","China, Hunan: 1019","China, Inner Mongolia: 194","China, Jiangsu: 653","China, Jiangxi: 937","China, Jilin: 104","China, Liaoning: 146","China, Macau: 45","China, Ningxia: 75","China, Qinghai: 18","China, Shaanxi: 256","China, Shandong: 787","China, Shanghai: 638","China, Shanxi: 197","China, Sichuan: 561","China, Tianjin: 189","China, Tibet: 1","China, Xinjiang: 76","China, Yunnan: 184","China, Zhejiang: 1268","Colombia: 3977","Congo (Brazzaville): 160","Congo (Kinshasa): 332","Costa Rica: 662","Cote d'Ivoire: 847","Croatia: 1881","Cuba: 1087","Cyprus: 772","Czechia: 6900","Denmark, Faroe Islands: 185","Denmark, Greenland: 11","Denmark: 7515","Djibouti: 846","Dominican Republic: 4964","Ecuador: 10128","Egypt: 3333","El Salvador: 218","Equatorial Guinea: 79","Eritrea: 39","Estonia: 1535","Eswatini: 24","Ethiopia: 111","Fiji: 18","Finland: 3868","France, French Guiana: 97","France, French Polynesia: 56","France, Guadeloupe: 148","France, Mayotte: 271","France, New Caledonia: 18","France, Reunion: 408","France, Saint Barthelemy: 6","France, St Martin: 37","France, Martinique: 163","France: 155275","Gabon: 120","Gambia: 10","Georgia: 402","Germany: 147065","Ghana: 1042","Greece: 2245","Guatemala: 289","Guinea: 622","Guyana: 65","Haiti: 57","Holy See: 9","Honduras: 477","Hungary: 1984","Iceland: 1773","India: 18539","Indonesia: 6760","Iran: 83505","Iraq: 1574","Ireland: 15652","Israel: 13713","Italy: 181228","Jamaica: 223","Japan: 10797","Jordan: 425","Kazakhstan: 1852","Kenya: 281","Korea, South: 10674","Kuwait: 1995","Kyrgyzstan: 568","Latvia: 739","Lebanon: 677","Liberia: 99","Liechtenstein: 81","Lithuania: 1326","Luxembourg: 3558","Madagascar: 121","Malaysia: 5425","Maldives: 69","Malta: 431","Mauritania: 7","Mauritius: 328","Mexico: 8261","Moldova: 2548","Monaco: 94","Mongolia: 33","Montenegro: 312","Morocco: 3046","Namibia: 16","Nepal: 31","Netherlands, Aruba: 97","Netherlands, Curacao: 14","Netherlands, Sint Maarten: 67","Netherlands: 33405","New Zealand: 1440","Nicaragua: 10","Niger: 648","Nigeria: 665","North Macedonia: 1225","Norway: 7156","Oman: 1410","Pakistan: 8418","Panama: 4467","Papua New Guinea: 7","Paraguay: 208","Peru: 16325","Philippines: 6459","Poland: 9593","Portugal: 20863","Qatar: 6015","Romania: 8936","Russia: 47121","Rwanda: 147","Saint Lucia: 15","Saint Vincent and the Grenadines: 12","San Marino: 462","Saudi Arabia: 10484","Senegal: 377","Serbia: 6630","Seychelles: 11","Singapore: 8014","Slovakia: 1173","Slovenia: 1335","Somalia: 237","South Africa: 3300","Spain: 200210","Sri Lanka: 304","Sudan: 107","Suriname: 10","Sweden: 14777","Switzerland: 27944","Taiwan*: 422","Tanzania: 254","Thailand: 2792","Togo: 84","Trinidad and Tobago: 114","Tunisia: 884","Turkey: 90980","Uganda: 56","Ukraine: 5710","United Arab Emirates: 7265","United Kingdom, Bermuda: 86","United Kingdom, Cayman Islands: 66","United Kingdom, Channel Islands: 488","United Kingdom, Gibraltar: 132","United Kingdom, Isle of Man: 300","United Kingdom, Montserrat: 11","United Kingdom: 124743","Uruguay: 535","Uzbekistan: 1627","Venezuela: 256","Vietnam: 268","Zambia: 65","Zimbabwe: 25","Dominica: 16","Grenada: 14","Mozambique: 39","Syria: 39","Timor-Leste: 22","Belize: 18","Laos: 19","Libya: 51","West Bank and Gaza: 449","Guinea-Bissau: 50","Mali: 246","Saint Kitts and Nevis: 15","Canada, Northwest Territories: 5","Canada, Yukon: 11","Kosovo: 510","Burma: 119","United Kingdom, Anguilla: 3","United Kingdom, British Virgin Islands: 5","United Kingdom, Turks and Caicos Islands: 11","Botswana: 20","Burundi: 5","Sierra Leone: 43","Netherlands, Bonaire, Sint Eustatius and Saba: 5","Malawi: 17","United Kingdom, Falkland Islands (Malvinas): 11","France, Saint Pierre and Miquelon: 1","South Sudan: 4","Western Sahara: 6","Sao Tome and Principe: 4","Yemen: 1"],{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]}],"limits":{"lat":[-51.7963,71.7069],"lng":[-170.132,178.065]}},"evals":[],"jsHooks":[]}</script>
-<script type="application/htmlwidget-sizing" data-for="htmlwidget-a3389aba944c6cb1e023">{"viewer":{"width":"100%","height":400,"padding":0,"fill":true},"browser":{"width":"100%","height":400,"padding":0,"fill":true}}</script>
+<script type="application/json" data-for="htmlwidget-6dfd29e72ccf2a59ba51">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircleMarkers","args":[[32.85044126,59.56149996,-14.271,33.21498827,34.9459153,37.982716535,38.87189877,41.474230515,38.66143781,29.31829741,32.73709786,13.4443,20.86399628,43.73947896,39.76302483,39.77682955,42.03621213,38.4808095,37.55716,30.77597786,44.446713025,39.03434575,42.13440424,43.70639106,45.17297924,32.75415613,38.41472379,46.909866005,41.22703692,39.15509045,43.294231355,40.28047017,34.64048375,42.617764425,35.651075225,47.35423935,15.0979,40.3162983,35.49447108,44.675842155,40.77129231,18.2208,41.5642026,34.01293543,44.071478135,35.9278914,31.772055605,39.64834818,44.15280289,18.3358,37.37373208,47.12521214,38.84315422,44.397069855,42.97272268,33,41.1533,28.0339,42.5063,-11.2027,17.0608,-38.4161,40.0691,-35.4735,-33.8688,-12.4634,-28.0167,-34.9285,-41.4545,-37.8136,-31.9505,47.5162,40.1431,25.0343,26.0275,23.685,13.1939,53.7098,50.8333,9.3077,27.5142,-16.2902,43.9159,-14.235,4.5353,42.7339,12.2383,16.5388,11.55,3.848,53.9333,49.2827,37.6489,53.7609,46.5653,53.1355,44.682,51.2538,46.5107,52.9399,52.9399,6.6111,15.4542,-35.6751,31.8257,40.1824,30.0572,26.0789,37.8099,23.3417,23.8298,26.8154,19.1959,39.549,47.862,33.882,22.3,30.9756,27.6104,44.0935,32.9711,27.614,43.6661,41.2956,22.1667,37.2692,35.7452,35.1917,36.3427,31.202,37.5777,30.6171,39.3054,31.6927,41.1129,24.974,29.1832,4.5709,-4.0383,-4.0383,9.7489,7.54,45.1,22,35.1264,49.8175,61.8926,71.7069,56.2639,11.8251,18.7357,-1.8312,26,13.7942,1.5,15.1794,58.5953,-26.5225,9.145,-17.7134,64,3.9339,-17.6797,16.25,-12.8275,-20.9043,-21.1351,17.9,18.0708,14.6415,46.2276,-0.8037,13.4432,42.3154,51,7.9465,39.0742,15.7835,9.9456,5,18.9712,41.9029,15.2,47.1625,64.9631,21,-0.7893,32,33,53.1424,31,43,18.1096,36,31.24,48.0196,-0.0236,36,29.5,41.2044,56.8796,33.8547,6.4281,47.14,55.1694,49.8153,-18.7669,2.5,3.2028,35.9375,21.0079,-20.2,23.6345,47.4116,43.7333,46.8625,42.5,31.7917,-22.9576,28.1667,12.5186,12.1696,18.0425,52.1326,-40.9006,12.8654,17.6078,9.082,41.6086,60.472,21,30.3753,8.538,-6.315,-23.4425,-9.19,13,51.9194,39.3999,25.3548,45.9432,60,-1.9403,13.9094,12.9843,43.9424,24,14.4974,44.0165,-4.6796,1.2833,48.669,46.1512,5.1521,-30.5595,40,7,12.8628,3.9193,63,46.8182,23.7,-6.369,15,8.6195,10.6918,34,38.9637,1,48.3794,24,32.3078,19.3133,49.3723,36.1408,54.2361,16.7425,55.3781,-32.5228,41.3775,6.4238,16,-15.4167,-20,15.415,12.1165,-18.665695,34.802075,-8.874217,13.1939,19.85627,26.3351,31.9522,11.8037,17.570692,17.357822,64.8255,64.2823,42.602636,21.9162,18.2206,18.4207,21.694,-22.3285,-3.3731,8.460555,12.1784,-13.254308,-51.7963,46.8852,6.877,24.2155,0.18636,15.552727],[-86.65158371,-146.5692662,-170.132,-110.8479088,-92.42320562,-120.80112585,-105.43381075,-72.43399837,-75.39031349,-82.28467476,-83.66879087,144.7937,-156.5689097,-114.47704375,-89.077688295,-86.125891085,-93.32780803,-98.07578384,-84.85960805,-91.762533265,-69.41414677,-76.585749845,-71.07850442,-84.89083249,-94.32603968,-89.530957415,-92.54382516,-109.8945161,-98.52150266,-117.6319999,-71.36158737,-74.61683016,-105.7417604,-74.964273065,-79.24596583,-99.84097493,145.6739,-82.95448222,-97.06826283,-121.65242485,-77.26297447,-66.5901,-71.28652315,-80.96377352,-98.816762155,-86.00778595,-98.523751165,-111.5758676,-72.62980836,-64.8963,-78.15826963,-120.7380126,-80.66591062,-89.56093696,-106.797885,65,20.1683,1.6596,1.5218,17.8739,-61.7964,-63.6167,45.0382,149.0124,151.2093,130.8456,153.4,138.6007,145.9707,144.9631,115.8605,14.5501,47.5769,-77.3963,50.55,90.3563,-59.5432,27.9534,4,2.3158,90.4336,-63.5887,17.6791,-51.9253,114.7277,25.4858,-1.5616,-23.0418,104.9167,11.5021,-116.5765,-123.1207,-122.6655,-98.8139,-66.4619,-57.6604,-63.7443,-85.3232,-63.4168,-73.5491,-106.4509,20.9394,18.7322,-71.543,117.2264,116.4142,107.874,117.9874,101.0583,113.4244,108.7881,106.8748,109.7453,116.1306,127.7615,113.614,114.2,112.2707,111.7088,113.9448,119.455,115.7221,126.1923,122.6085,113.55,106.1655,95.9956,108.8701,118.1498,121.4491,112.2922,102.7103,117.323,88.0924,85.2401,101.487,120.0934,-74.2973,21.7587,21.7587,-83.7534,-5.5471,15.2,-80,33.4299,15.473,-6.9118,-42.6043,9.5018,42.5903,-70.1627,-78.1834,30,-88.8965,10,39.7823,25.0136,31.4659,40.4897,178.065,26,-53.1258,149.4068,-61.5833,45.1662,165.618,55.2471,-62.8333,-63.0501,-61.0242,2.2137,11.6094,-15.3101,43.3569,9,-1.0232,21.8243,-90.2308,-9.6966,-58.75,-72.2852,12.4534,-86.2419,19.5033,-19.0208,78,113.9213,53,44,-7.6921,35,12,-77.2975,138,36.51,66.9237,37.9062,128,47.75,74.7661,24.6032,35.8623,-9.4295,9.55,23.8813,6.1296,46.8691,112.5,73.2207,14.3754,10.9408,57.5,-102.5528,28.3699,7.4167,103.8467,19.3,-7.0926,18.4904,84.25,-70.0358,-68.99,-63.0548,5.2913,174.886,-85.2072,8.0817,8.6753,21.7453,8.4689,57,69.3451,-80.7821,143.9555,-58.4438,-75.0152,122,19.1451,-8.2245,51.1839,24.9668,90,29.8739,-60.9789,-61.2872,12.4578,45,-14.4524,21.0059,55.492,103.8333,19.699,14.9955,46.1996,22.9375,-4,81,30.2176,-56.0278,16,8.2275,121,34.8888,101,0.8248,-61.2225,9,35.2433,32,31.1656,54,-64.7505,-81.2546,-2.3644,-5.3536,-4.5481,-62.1874,-3.436,-55.7658,64.5853,-66.5897,108,28.2833,30,-61.371,-61.679,35.529562,38.996815,125.727539,-59.5432,102.495496,17.228331,35.2332,-15.1804,-3.996166,-62.782998,-124.8457,-135,20.902977,95.956,-63.0686,-64.64,-71.7979,24.6849,29.9189,-11.779889,-68.2385,34.301525,-59.5236,-56.3159,31.307,-12.8858,6.613081,48.516388],[5.80689160663536,5.19319088253281,5,5.87352287671245,5.4021588915754,7.20929445800156,6.3197449744973,7.16185882375735,5.5271118419468,6.79157854141737,6.68788844561099,5.14399598199218,5.20364107066057,5.4271611135193,7.31291795144401,6.52662907547308,5.55769404017648,5.62102180045146,5.77811143844107,7.31829059039367,5.37549558085717,6.38266138620994,7.65983615539735,8.14887310656591,5.74544871576862,5.81201477941633,5.90843092452298,5.20364107066057,5.3407566871646,5.80945724619931,5.39696952717705,9.2531255430327,5.47758064358682,13.7109833440474,5.91071055401574,5.19319088253281,5.09107105540157,6.39757725889332,5.76195511628767,5.55396360339141,7.30033299550049,5.5070621767502,5.78869847527223,5.70543336178366,5.1703783435823,5.7834228409772,6.42548749462398,5.33461642410589,5.39696952717705,5.1115388080353,6.07177903169262,6.62402955883265,5.27321316620472,5.95516128717365,5.09107105540157,5.38638176506561,5.328361359961,6.26191756043557,5.3917114204886,5.09107105540157,5.1115388080353,5.75099116171433,5.30204852002869,5.1115388080353,5.328361359961,5,5.15773969505445,5.12879392168854,5.1703783435823,5.24095136422875,5.1703783435823,6.39609284290472,5.28069984459131,5.19319088253281,5.1703783435823,5.64718144686309,5.14399598199218,5.45988628688502,9.91615020137926,5.06439696084427,5,5.36993237581656,5.45077872590988,8.27539427858476,5.06439696084427,5.42227911188817,5.39696952717705,5.06439696084427,5,5.41734000499723,5.49464244196461,5.58313928217041,5,5.15773969505445,5,5.1115388080353,5.19319088253281,6.60863556630159,5,6.9733229546766,5.12879392168854,5,5,5.75922897117469,5.15773969505445,5.18214211080315,5.15773969505445,5.06439696084427,5.09107105540157,5.18214211080315,5.09107105540157,5.09107105540157,5.15773969505445,5.15773969505445,5.23218654430806,5.30204852002869,5.12879392168854,9.32563546426348,5.12879392168854,5.06439696084427,5,5.06439696084427,5.06439696084427,5.09107105540157,5,5,5,5.1115388080353,5.1703783435823,5.1703783435823,5,5.1115388080353,5.1115388080353,5,5.1115388080353,5.09107105540157,5.06439696084427,5.88531184278191,5.15773969505445,5.32198480422134,5.15773969505445,5.19319088253281,5.44148332086386,5.38638176506561,5.22307761607059,5.8969458745096,5,5,6.2286157080292,5.09107105540157,5.98718671638393,6.45000450445886,6.01820535330284,5.1703783435823,5,5,5.40728214132114,5.06439696084427,5.1115388080353,5,5.63749738781102,5.06439696084427,5,5.18214211080315,5.12879392168854,5,5,5,5.09107105540157,5.22307761607059,14.1672415692808,5.06439696084427,5.06439696084427,5.12879392168854,9.49027406377231,5.19319088253281,5.69357649444995,5.1703783435823,5.14399598199218,5.1703783435823,5.1115388080353,5,5.43676143835623,5.90843092452298,5.20364107066057,6.5668456819544,6.56419674399584,9.6477477621081,5.58313928217041,6.68788844561099,5.85674584106265,15,5.14399598199218,5.98928488392923,5.1703783435823,5.28069984459131,5.24095136422875,5.98928488392923,5.19319088253281,5.1703783435823,5.14399598199218,5.29510394759397,5.18214211080315,5.06439696084427,5.3917114204886,5.55769404017648,5,5.60751971356662,5,5.1115388080353,5.06439696084427,5.19319088253281,6.68665954960125,5.5387836296868,5.1115388080353,5,5.14399598199218,5.77007564883906,5,5,5.09107105540157,5.06439696084427,5.20364107066057,8.94401814029607,5.22307761607059,5.09107105540157,5.28799196398435,5.30204852002869,5.47321908516334,5.86637250097292,5.1703783435823,5.85432222703859,5.72285409268625,5,5.18214211080315,6.35845537720616,6.33225468520051,6.2553278675596,6.74585849827356,5.19319088253281,6.40792434972111,6.29596383792959,5,5,5,5.4021588915754,5.65355777272997,5.14399598199218,5.71997990996088,5,5.21358055675965,5.23218654430806,5.56508103806474,5.18214211080315,5.49043264249715,14.2990638527638,5.1703783435823,5.22307761607059,5.06439696084427,7.55972856651749,7.43434140596239,5.15773969505445,5.20364107066057,5.44148332086386,5.15773969505445,5.18214211080315,5.39696952717705,7.97901203945091,5,5.79132310307656,5.42227911188817,5.14399598199218,5.06439696084427,5.31547939010889,5,5.19319088253281,5,13.2741950699591,5.20364107066057,5.14399598199218,5.19319088253281,5,5.1115388080353,5.1115388080353,5,5,5,5.1115388080353,5,5.09107105540157,5,5.06439696084427,5.1115388080353,5,5.24095136422875,5,5,5,5.22307761607059,5.14399598199218,5,5.06439696084427,5.06439696084427,5.06439696084427,5.06439696084427,5,5,5.09107105540157,5,5,5,5,5,5],null,null,{"interactive":true,"className":"","stroke":false,"color":"#F30","weight":5,"opacity":0.5,"fill":true,"fillColor":"#F30","fillOpacity":0.5},null,null,null,null,["Alabama, US: 5079","Alaska, US: 321","American Samoa, US: 0","Arizona, US: 5068","Arkansas, US: 1973","California, US: 33686","Colorado, US: 9730","Connecticut, US: 19815","Delaware, US: 2745","Florida, US: 27059","Georgia, US: 19407","Guam, US: 136","Hawaii, US: 584","Idaho, US: 1672","Illinois, US: 31513","Indiana, US: 11688","Iowa, US: 3159","Kansas, US: 2048","Kentucky, US: 3050","Louisiana, US: 24523","Maine, US: 875","Maryland, US: 13684","Massachusetts, US: 38077","Michigan, US: 32000","Minnesota, US: 2470","Mississippi, US: 4512","Missouri, US: 5890","Montana, US: 433","Nebraska, US: 1648","Nevada, US: 3830","New Hampshire, US: 1447","New Jersey, US: 88722","New Mexico, US: 1971","New York, US: 253060","North Carolina, US: 6895","North Dakota, US: 627","Northern Mariana Islands, US: 14","Ohio, US: 12919","Oklahoma, US: 2680","Oregon, US: 1957","Pennsylvania, US: 33914","Puerto Rico, US: 1252","Rhode Island, US: 5090","South Carolina, US: 4446","South Dakota, US: 1685","Tennessee, US: 7238","Texas, US: 19751","Utah, US: 3213","Vermont, US: 816","Virgin Islands, US: 53","Virginia, US: 8990","Washington, US: 12114","West Virginia, US: 902","Wisconsin, US: 4499","Wyoming, US: 317","Afghanistan: 1026","Albania: 584","Algeria: 2718","Andorra: 717","Angola: 24","Antigua and Barbuda: 23","Argentina: 2941","Armenia: 1339","Australia, Australian Capital Territory: 103","Australia, New South Wales: 2926","Australia, Northern Territory: 28","Australia, Queensland: 1015","Australia, South Australia: 435","Australia, Tasmania: 180","Australia, Victoria: 1319","Australia, Western Australia: 541","Austria: 14795","Azerbaijan: 1436","Bahamas: 60","Bahrain: 1907","Bangladesh: 2948","Barbados: 75","Belarus: 6264","Belgium: 39983","Benin: 54","Bhutan: 5","Bolivia: 564","Bosnia and Herzegovina: 1309","Brazil: 40743","Brunei: 138","Bulgaria: 929","Burkina Faso: 581","Cabo Verde: 67","Cambodia: 122","Cameroon: 1163","Canada, Alberta: 2908","Canada, British Columbia: 1647","Canada, Grand Princess: 13","Canada, Manitoba: 254","Canada, New Brunswick: 118","Canada, Newfoundland and Labrador: 257","Canada, Nova Scotia: 721","Canada, Ontario: 12063","Canada, Prince Edward Island: 26","Canada, Quebec: 19319","Canada, Saskatchewan: 316","Central African Republic: 12","Chad: 33","Chile: 10507","China, Anhui: 991","China, Beijing: 593","China, Chongqing: 579","China, Fujian: 355","China, Gansu: 139","China, Guangdong: 1581","China, Guangxi: 254","China, Guizhou: 147","China, Hainan: 168","China, Hebei: 328","China, Heilongjiang: 905","China, Henan: 1276","China, Hong Kong: 1025","China, Hubei: 68128","China, Hunan: 1019","China, Inner Mongolia: 194","China, Jiangsu: 653","China, Jiangxi: 937","China, Jilin: 104","China, Liaoning: 146","China, Macau: 45","China, Ningxia: 75","China, Qinghai: 18","China, Shaanxi: 256","China, Shandong: 787","China, Shanghai: 638","China, Shanxi: 197","China, Sichuan: 561","China, Tianjin: 189","China, Tibet: 1","China, Xinjiang: 76","China, Yunnan: 184","China, Zhejiang: 1268","Colombia: 3977","Congo (Brazzaville): 160","Congo (Kinshasa): 332","Costa Rica: 662","Cote d'Ivoire: 847","Croatia: 1881","Cuba: 1087","Cyprus: 772","Czechia: 6900","Denmark, Faroe Islands: 185","Denmark, Greenland: 11","Denmark: 7515","Djibouti: 846","Dominican Republic: 4964","Ecuador: 10128","Egypt: 3333","El Salvador: 218","Equatorial Guinea: 79","Eritrea: 39","Estonia: 1535","Eswatini: 24","Ethiopia: 111","Fiji: 18","Finland: 3868","France, French Guiana: 97","France, French Polynesia: 56","France, Guadeloupe: 148","France, Mayotte: 271","France, New Caledonia: 18","France, Reunion: 408","France, Saint Barthelemy: 6","France, St Martin: 37","France, Martinique: 163","France: 155275","Gabon: 120","Gambia: 10","Georgia: 402","Germany: 147065","Ghana: 1042","Greece: 2245","Guatemala: 289","Guinea: 622","Guyana: 65","Haiti: 57","Holy See: 9","Honduras: 477","Hungary: 1984","Iceland: 1773","India: 18539","Indonesia: 6760","Iran: 83505","Iraq: 1574","Ireland: 15652","Israel: 13713","Italy: 181228","Jamaica: 223","Japan: 10797","Jordan: 425","Kazakhstan: 1852","Kenya: 281","Korea, South: 10674","Kuwait: 1995","Kyrgyzstan: 568","Latvia: 739","Lebanon: 677","Liberia: 99","Liechtenstein: 81","Lithuania: 1326","Luxembourg: 3558","Madagascar: 121","Malaysia: 5425","Maldives: 69","Malta: 431","Mauritania: 7","Mauritius: 328","Mexico: 8261","Moldova: 2548","Monaco: 94","Mongolia: 33","Montenegro: 312","Morocco: 3046","Namibia: 16","Nepal: 31","Netherlands, Aruba: 97","Netherlands, Curacao: 14","Netherlands, Sint Maarten: 67","Netherlands: 33405","New Zealand: 1440","Nicaragua: 10","Niger: 648","Nigeria: 665","North Macedonia: 1225","Norway: 7156","Oman: 1410","Pakistan: 8418","Panama: 4467","Papua New Guinea: 7","Paraguay: 208","Peru: 16325","Philippines: 6459","Poland: 9593","Portugal: 20863","Qatar: 6015","Romania: 8936","Russia: 47121","Rwanda: 147","Saint Lucia: 15","Saint Vincent and the Grenadines: 12","San Marino: 462","Saudi Arabia: 10484","Senegal: 377","Serbia: 6630","Seychelles: 11","Singapore: 8014","Slovakia: 1173","Slovenia: 1335","Somalia: 237","South Africa: 3300","Spain: 200210","Sri Lanka: 304","Sudan: 107","Suriname: 10","Sweden: 14777","Switzerland: 27944","Taiwan*: 422","Tanzania: 254","Thailand: 2792","Togo: 84","Trinidad and Tobago: 114","Tunisia: 884","Turkey: 90980","Uganda: 56","Ukraine: 5710","United Arab Emirates: 7265","United Kingdom, Bermuda: 86","United Kingdom, Cayman Islands: 66","United Kingdom, Channel Islands: 488","United Kingdom, Gibraltar: 132","United Kingdom, Isle of Man: 300","United Kingdom, Montserrat: 11","United Kingdom: 124743","Uruguay: 535","Uzbekistan: 1627","Venezuela: 256","Vietnam: 268","Zambia: 65","Zimbabwe: 25","Dominica: 16","Grenada: 14","Mozambique: 39","Syria: 39","Timor-Leste: 22","Belize: 18","Laos: 19","Libya: 51","West Bank and Gaza: 449","Guinea-Bissau: 50","Mali: 246","Saint Kitts and Nevis: 15","Canada, Northwest Territories: 5","Canada, Yukon: 11","Kosovo: 510","Burma: 119","United Kingdom, Anguilla: 3","United Kingdom, British Virgin Islands: 5","United Kingdom, Turks and Caicos Islands: 11","Botswana: 20","Burundi: 5","Sierra Leone: 43","Netherlands, Bonaire, Sint Eustatius and Saba: 5","Malawi: 17","United Kingdom, Falkland Islands (Malvinas): 11","France, Saint Pierre and Miquelon: 1","South Sudan: 4","Western Sahara: 6","Sao Tome and Principe: 4","Yemen: 1"],{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]},{"method":"addProviderTiles","args":["Stamen.TonerLite",null,"Toner",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"minZoom":8,"maxZoom":10}]},{"method":"addProviderTiles","args":["Esri.WorldTopoMap",null,"Topo",{"errorTileUrl":"","noWrap":false,"detectRetina":false}]},{"method":"addProviderTiles","args":["OpenStreetMap.Mapnik",null,"Mapnik",{"errorTileUrl":"","noWrap":false,"detectRetina":false}]},{"method":"addProviderTiles","args":["CartoDB.Positron",null,"CartoDB",{"errorTileUrl":"","noWrap":false,"detectRetina":false}]},{"method":"addLayersControl","args":[["Toner","Topo","Mapnik","CartoDB"],[],{"collapsed":true,"autoZIndex":true,"position":"topright"}]}],"limits":{"lat":[-51.7963,71.7069],"lng":[-170.132,178.065]},"setView":[[25,10],3,[]]},"evals":[],"jsHooks":[]}</script>
+<script type="application/htmlwidget-sizing" data-for="htmlwidget-6dfd29e72ccf2a59ba51">{"viewer":{"width":"100%","height":400,"padding":0,"fill":true},"browser":{"width":"100%","height":400,"padding":0,"fill":true}}</script>
 </body>
 </html>
