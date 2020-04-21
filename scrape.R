@@ -384,20 +384,48 @@ dt1 <- as.Date(strptime(colnames(d3c), "%m/%e/%y", "UTC"))
 dt2 <- as.Date(strptime(colnames(d2c)[-(1:4)], "%m/%e/%y", "UTC"))
 stopifnot(all(dt1==dt2))
 
+rownames(d3c) <- paste0("US, ", rownames(d3c))
+rownames(d3d) <- paste0("US, ", rownames(d3d))
+
+biggies <- d2c[[2]][d2c[[1]]!=""]
+zzz <- d2c[[2]][d2c[[2]] %in% biggies & d2c[[1]]==""]
+biggies <- unique(biggies[!(biggies %in% zzz)])
+
+for (b in biggies) {
+  tmpc <- colSums(d2c[d2c[[2]]==b,-(1:4)], na.rm=TRUE)
+  newc <- data.frame("Province/State"="",
+                     "Country/Region"=b,
+                     Lat=NA, Long=NA,
+                     t(data.matrix(tmpc)),
+                     check.names = FALSE)
+  tmpd <- colSums(d2d[d2d[[2]]==b,-(1:4)], na.rm=TRUE)
+  newd <- data.frame("Province/State"="",
+                     "Country/Region"=b,
+                     Lat=NA, Long=NA,
+                     t(data.matrix(tmpd)),
+                     check.names = FALSE)
+  d2c <- rbind(d2c, newc)
+  d2d <- rbind(d2d, newd)
+}
+
 tmp1 <- as.matrix(d2c[,-(1:4)])
-rownames(tmp1) <- ifelse(l2c[["Province/State"]] == "",
-  l2c[["Country/Region"]],
-  paste0(l2c[["Country/Region"]], ", ", l2c[["Province/State"]]))
+rownames(tmp1) <- ifelse(d2c[["Province/State"]] == "",
+  d2c[["Country/Region"]],
+  paste0(d2c[["Country/Region"]], ", ", d2c[["Province/State"]]))
 dc <- data.frame(Date=dt1,
   cbind(t(as.matrix(d3c)), t(tmp1)),
   check.names = FALSE)
 tmp2 <- as.matrix(d2d[,-(1:4)])
-rownames(tmp2) <- ifelse(l2d[["Province/State"]] == "",
-  l2d[["Country/Region"]],
-  paste0(l2d[["Country/Region"]], ", ", l2d[["Province/State"]]))
+rownames(tmp2) <- ifelse(d2d[["Province/State"]] == "",
+  d2d[["Country/Region"]],
+  paste0(d2d[["Country/Region"]], ", ", d2d[["Province/State"]]))
 dd <- data.frame(Date=dt1,
-  cbind(t(as.matrix(d3d)), t(tmp2)))
+  cbind(t(as.matrix(d3d)), t(tmp2)),
+  check.names = FALSE)
 rownames(q) <- rownames(dc) <- rownames(dd) <- NULL
+
+stopifnot(all(colnames(dc)==colnames(dd)))
+stopifnot(length(colnames(dc)[duplicated(colnames(dc))]) == 0)
 
 cat("OK\nWriting global data ... ")
 dir.create("_stats/api/v1/data/world")
