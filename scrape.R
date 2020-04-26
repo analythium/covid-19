@@ -410,6 +410,8 @@ for (i in st) {
   xy3[i,"Lat"] <- median(d1c[ii, "Lat"])
 }
 
+d1c <- d1c[!is.na(d1c$UID),]
+d1d <- d1d[!is.na(d1d$UID),]
 clast1 <- colnames(d1c)[ncol(d1c)]
 l1c <- d1c[,!cold]
 l1d <- d1d[,!cold]
