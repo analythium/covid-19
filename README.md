@@ -1,4 +1,6 @@
 # covid-19
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fanalythium%2Fcovid-19.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fanalythium%2Fcovid-19?ref=badge_shield)
+
 > COVID-19 analysis
 
 This project takes the data from https://github.com/CSSEGISandData/COVID-19,
@@ -20,3 +22,7 @@ Travis CI is updating the API using a daily cron job:
 https://travis-ci.org/github/analythium/covid-19
 
 We also scrape the Alberta COVID-19 report: https://covid19stats.alberta.ca/
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fanalythium%2Fcovid-19.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fanalythium%2Fcovid-19?ref=badge_large)
