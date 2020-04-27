@@ -444,6 +444,7 @@ l12$Deaths[l12$Deaths < 0] <- 0
 l12 <- l12[l12$Long != 0 & l12$Lat != 0,]
 
 q <- l12
+q <- q[!is.na(q$Long) & !is.na(q$Lat),]
 q$ConfirmedScale <- sqrt(q$Confirmed/max(q$Confirmed))
 q$ConfirmedScale[is.na(q$ConfirmedScale)] <- 0
 q$DeathsScale <- sqrt(q$Deaths/max(q$Deaths))
@@ -500,13 +501,41 @@ cat("OK\nWriting global data ... ")
 dir.create("_stats/api/v1/data/world")
 dir.create("_stats/api/v1/data/world/latest")
 writeLines(toJSON(q),
-    "_stats/api/v1/data/world/latest/index.json")
+  "_stats/api/v1/data/world/latest/index.json")
 dir.create("_stats/api/v1/data/world/confirmed")
 writeLines(toJSON(dc),
-    "_stats/api/v1/data/world/confirmed/index.json")
+  "_stats/api/v1/data/world/confirmed/index.json")
 dir.create("_stats/api/v1/data/world/deaths")
 writeLines(toJSON(dd),
-    "_stats/api/v1/data/world/deaths/index.json")
+  "_stats/api/v1/data/world/deaths/index.json")
+
+cat("OK\nSaving RData ... ")
+save(out, z, all, ab, abr, abd, q, dc, dd,
+  file="_stats/data/covid-19.RData")
+
+cat("OK\nSaving map ... ")
+suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(htmlwidgets))
+
+l <- leaflet(q) %>% addTiles() %>%
+  addCircleMarkers(
+    lng=~Long,
+    lat=~Lat,
+    color="#F30",
+    radius=~10*sqrt(ConfirmedScale)+5,
+    stroke = FALSE, fillOpacity = 0.5,
+    label=~paste0(Combined_Key, ": ", q$Confirmed)) %>%
+  setView(lng = 10, lat = 25, zoom = 03) %>%
+      addProviderTiles("Esri.OceanBasemap", group = "Esri.OceanBasemap") %>%
+      addProviderTiles("CartoDB.DarkMatter", group = "DarkMatter (CartoDB)") %>%
+      addProviderTiles("OpenStreetMap.Mapnik", group = "OpenStreetmap") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Esri.WorldImagery") %>%
+      addLayersControl(baseGroups = c("OpenStreetmap","Esri.OceanBasemap",
+        "DarkMatter (CartoDB)", "Esri.WorldImagery"),
+        options = layersControlOptions(collapsed = TRUE, autoZIndex = FALSE))
+od <- setwd("www")
+saveWidget(l, "map.html")
+setwd(od)
 
 cat("OK\nDONE\n\n")
 

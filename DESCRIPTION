@@ -2,4 +2,4 @@ Package: placeholder
 Type: Script
 Title: Does not matter.
 Version: 0.0.1
-Imports: jsonlite, forecast, rmarkdown, xml2, rvest
+Imports: jsonlite, forecast, rmarkdown, xml2, rvest, leaflet, htmlwidgets
