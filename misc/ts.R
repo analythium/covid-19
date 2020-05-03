@@ -247,3 +247,26 @@ rr <- rate_ts(y, w=4)
 plot(rr, type="l")
 lines(lowess(rr), lty=2)
 
+
+## Alberta areas
+
+library(jsonlite)
+
+baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
+
+SEQ <- seq(as.Date("2020-03-24"), Sys.Date(), 1)
+dates <- c("2020-03-20", "2020-03-22", as.character(SEQ))
+dates <- dates[!(dates %in% c("2020-04-24","2020-04-25"))]
+
+Map <- list()
+for (i in dates) {
+  cat(i, "\n")
+  tmp <- fromJSON(paste0(baseurl, i, ".json"))
+  if ("areas" %in% names(tmp)) {
+    Map[[i]] <- tmp[["areas"]]
+  } else {
+    break
+  }
+
+}
+
