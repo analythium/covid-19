@@ -251,22 +251,104 @@ lines(lowess(rr), lty=2)
 ## Alberta areas
 
 library(jsonlite)
+f1 <- function(zz) {
+  zz <- gsub("<br/ >", "<br/>", zz)
+  zz <- strsplit(zz, "<br/>")
+  zz <- lapply(zz, trimws)
+  zz <- lapply(zz, function(z) gsub("<strong>", "", gsub("</strong>", "", z)))
+  zz
+}
+f2 <- function(zzz) {
+  out <- data.frame(Area=zzz[1], Cases=0, Active=0, Recovered=0, Deaths=0)
+  u <- grepl("Cases", zzz)
+  if (any(u))
+    out$Cases <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Active", zzz)
+  if (any(u))
+    out$Active <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Recovered", zzz)
+  if (any(u))
+    out$Recovered <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Death(s)", zzz)
+  if (any(u))
+    out$Deaths <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  out
+}
 
 baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
 
-SEQ <- seq(as.Date("2020-03-24"), Sys.Date(), 1)
-dates <- c("2020-03-20", "2020-03-22", as.character(SEQ))
-dates <- dates[!(dates %in% c("2020-04-24","2020-04-25"))]
+SEQ <- as.character(seq(as.Date("2020-03-20"), Sys.Date(), 1))
+#dates <- c("2020-03-20", "2020-03-22", as.character(SEQ))
+#dates <- dates[!(dates %in% c("2020-04-24","2020-04-25"))]
 
 Map <- list()
-for (i in dates) {
+for (i in SEQ) {
   cat(i, "\n")
   tmp <- fromJSON(paste0(baseurl, i, ".json"))
   if ("areas" %in% names(tmp)) {
     Map[[i]] <- tmp[["areas"]]
   } else {
-    break
+    for (j in names(tmp)) {
+      if (!is.null(tmp[[j]]$x$options$crs$crsClass)) {
+        z <- tmp[[j]]
+        if (i %in% c("2020-03-21", "2020-03-23")) {
+          zz <- f1(z$x$calls[[2]][[2]][[7]])
+          Map[[i]] <- list(area=sapply(zz, "[[", 1),
+            cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
+        } else {
+          # Municipality
+          zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+          # Local geographic area
+          zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+          Map[[i]] <- list(municipalities=zzM, local=zzG)
+          if (nrow(Map[[i]]$local)<=1)
+            Map[[i]]$local <- NULL
+        }
+      }
+    }
   }
-
 }
 
+# 2020-03-20: 132 areas
+# 2020-04-07-2020-04-09: 105 Municipalities, no areas
+# Since 2020-04-10: 105 Municipality & 133 Area
+
+n <- length(Map)
+Areas <- as.character(Map[[n]]$local[,1])
+Munic <- as.character(Map[[n]]$municipalities[,1])
+AA <- matrix(NA, length(Areas), n)
+dimnames(AA) <- list(Areas, SEQ)
+MM <- matrix(NA, length(Munic), n)
+dimnames(MM) <- list(Munic, SEQ)
+for (i in 1:n) {
+  if ("area" %in% names(Map[[i]])) {
+    AA[,i] <- Map[[i]]$cases[match(rownames(AA), Map[[i]]$area)]
+  }
+  if ("local" %in% names(Map[[i]])) {
+    AA[,i] <- Map[[i]]$local$Cases[match(rownames(AA),
+              Map[[i]]$local$Area)]
+  }
+  if ("municipalities" %in% names(Map[[i]])) {
+    MM[,i] <- Map[[i]]$municipalities$Cases[match(rownames(MM),
+              Map[[i]]$municipalities$Area)]
+  }
+}
+
+write.csv(MM, file="Municipalities.csv")
+write.csv(AA, file="LocalAreas.csv")
+
+cbind(colSums(AA, na.rm=TRUE),
+  colSums(MM, na.rm=TRUE))
+
+dAA <- AA[,-1]
+for (i in 1:nrow(AA))
+  dAA[i,] <- diff(AA[i,])
+dMM <- MM[,-1]
+for (i in 1:nrow(MM))
+  dMM[i,] <- diff(MM[i,])
+
+matplot(t(AA), lty=1, type="l")
+matplot(t(MM), lty=1, type="l")
+
+matplot(t(dAA), lty=1, type="l")
+matplot(t(dMM), lty=1, type="l")
