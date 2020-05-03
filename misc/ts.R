@@ -334,6 +334,10 @@ for (i in 1:n) {
   }
 }
 
+ss <- AA[,"2020-04-06"] == AA[,"2020-04-10"]
+ss[is.na(ss)] <- FALSE
+AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
+
 write.csv(MM, file="Municipalities.csv")
 write.csv(AA, file="LocalAreas.csv")
 
