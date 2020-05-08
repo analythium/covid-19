@@ -401,11 +401,98 @@ dir.create("_stats/api/v1/data/world/deaths")
 writeLines(toJSON(dd),
   "_stats/api/v1/data/world/deaths/index.json")
 
+cat("OK\nSaving Koronavirus ... ")
+Dt <- as.character(Sys.Date())
+Fn <- paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg")
+try(utils::download.file(paste0("https://koronavirus.gov.hu/sites/default/files/", Fn),
+  paste0("_stats/data/", Fn)))
+
+cat("OK\nUpdating AB area level data ... ")
+
+f1 <- function(zz) {
+  zz <- gsub("<br/ >", "<br/>", zz)
+  zz <- strsplit(zz, "<br/>")
+  zz <- lapply(zz, trimws)
+  zz <- lapply(zz, function(z) gsub("<strong>", "", gsub("</strong>", "", z)))
+  zz
+}
+f2 <- function(zzz) {
+  out <- data.frame(Area=zzz[1], Cases=0, Active=0, Recovered=0, Deaths=0)
+  u <- grepl("Cases", zzz)
+  if (any(u))
+    out$Cases <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Active", zzz)
+  if (any(u))
+    out$Active <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Recovered", zzz)
+  if (any(u))
+    out$Recovered <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  u <- grepl("Death(s)", zzz)
+  if (any(u))
+    out$Deaths <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
+  out
+}
+
+baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
+SEQ <- as.character(seq(as.Date("2020-03-20"), Sys.Date(), 1))
+Map <- list()
+for (i in SEQ) {
+  cat(i, "\n")
+  tmp <- fromJSON(paste0(baseurl, i, ".json"))
+  if ("areas" %in% names(tmp)) {
+    Map[[i]] <- tmp[["areas"]]
+  } else {
+    for (j in names(tmp)) {
+      if (!is.null(tmp[[j]]$x$options$crs$crsClass)) {
+        z <- tmp[[j]]
+        if (i %in% c("2020-03-21", "2020-03-23")) {
+          zz <- f1(z$x$calls[[2]][[2]][[7]])
+          Map[[i]] <- list(area=sapply(zz, "[[", 1),
+            cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
+        } else {
+          # Municipality
+          zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+          # Local geographic area
+          zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+          Map[[i]] <- list(municipalities=zzM, local=zzG)
+          if (nrow(Map[[i]]$local)<=1)
+            Map[[i]]$local <- NULL
+        }
+      }
+    }
+  }
+}
+
+n <- length(Map)
+Areas <- as.character(Map[[n]]$local[,1])
+Munic <- as.character(Map[[n]]$municipalities[,1])
+AA <- matrix(NA, length(Areas), n)
+dimnames(AA) <- list(Areas, SEQ)
+MM <- matrix(NA, length(Munic), n)
+dimnames(MM) <- list(Munic, SEQ)
+for (i in 1:n) {
+  if ("area" %in% names(Map[[i]])) {
+    AA[,i] <- Map[[i]]$cases[match(rownames(AA), Map[[i]]$area)]
+  }
+  if ("local" %in% names(Map[[i]])) {
+    AA[,i] <- Map[[i]]$local$Cases[match(rownames(AA),
+              Map[[i]]$local$Area)]
+  }
+  if ("municipalities" %in% names(Map[[i]])) {
+    MM[,i] <- Map[[i]]$municipalities$Cases[match(rownames(MM),
+              Map[[i]]$municipalities$Area)]
+  }
+}
+
+ss <- AA[,"2020-04-06"] == AA[,"2020-04-10"]
+ss[is.na(ss)] <- FALSE
+AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
+
 cat("OK\nSaving RData ... ")
-save(out, z, all, ab, abr, abd, q, dc, dd,
+save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM,
   file="_stats/data/covid-19.RData")
 
-cat("OK\nSaving map ... ")
+cat("OK\nSaving world map ... ")
 suppressPackageStartupMessages(library(leaflet))
 suppressPackageStartupMessages(library(htmlwidgets))
 
