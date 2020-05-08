@@ -313,6 +313,17 @@ for (i in SEQ) {
 # 2020-04-07-2020-04-09: 105 Municipalities, no areas
 # Since 2020-04-10: 105 Municipality & 133 Area
 
+## 2017 population data
+NN <- read.csv("~/Dropbox/consulting/2020/covid/ab/Covid.Alberta.Demographic.csv")
+N <- as.character(NN[,3])
+#N <- gsub(",", "", N)
+N <- as.integer(N)
+names(N) <- as.character(NN[,1])
+N <- N[!is.na(N)]
+Reg <- as.character(NN[,2])
+names(Reg) <- as.character(NN[,1])
+Reg <- Reg[names(N)]
+
 n <- length(Map)
 Areas <- as.character(Map[[n]]$local[,1])
 Munic <- as.character(Map[[n]]$municipalities[,1])
@@ -338,11 +349,25 @@ ss <- AA[,"2020-04-06"] == AA[,"2020-04-10"]
 ss[is.na(ss)] <- FALSE
 AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
 
+Areas <- list(Areas=AA[names(N),], Population=N, Dates=as.Date(colnames(AA)), Regions=Reg)
+ABsp <- rgdal::readOGR("./data/alberta-areas.geojson")
+ABsp <- ABsp[match(names(N), as.character(ABsp@data$ID)),]
+plot(ABsp, col=as.factor(Reg))
+save(Areas, ABsp, file="~/dev/covidapp/R/areas.RData")
+
+AAt <- data.frame(Date=colnames(AA), t(AA), check.names=FALSE)
+toJSON(AAt, dataframe="columns", na="null")
+MMt <- data.frame(Date=colnames(MM), t(MM), check.names=FALSE)
+toJSON(MMt, dataframe="columns", na="null")
+
 write.csv(MM, file="Municipalities.csv")
 write.csv(AA, file="LocalAreas.csv")
 
-cbind(colSums(AA, na.rm=TRUE),
-  colSums(MM, na.rm=TRUE))
+plot(cbind(colSums(AA, na.rm=TRUE),
+  colSums(MM, na.rm=TRUE)))
+
+AAA <- AA / pmax(1, apply(AA, 1, max, na.rm=TRUE))
+
 
 dAA <- AA[,-1]
 for (i in 1:nrow(AA))
@@ -351,8 +376,10 @@ dMM <- MM[,-1]
 for (i in 1:nrow(MM))
   dMM[i,] <- diff(MM[i,])
 
-matplot(t(AA), lty=1, type="l")
+matplot(t(AAA[AA[,n]>0,]), lty=1, type="l", col="grey")
+lines(colMeans(AAA[AA[,n]>0,], na.rm=TRUE), col=1, lwd=3)
 matplot(t(MM), lty=1, type="l")
+boxplot(AAA[AA[,n]>0,], col="#ff000044")
 
 matplot(t(dAA), lty=1, type="l")
 matplot(t(dMM), lty=1, type="l")
