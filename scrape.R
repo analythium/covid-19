@@ -28,6 +28,7 @@ out <- list()
 out$source <- list(url=url, time=Sys.time())
 
 out <- c(out, json, tab)
+TODAY <- as.Date(Sys.time())
 
 ## write json
 cat("OK\nWriting results for Alberta ... ")
@@ -37,7 +38,7 @@ dir.create("_stats/api/v1/data/alberta/latest")
 writeLines(toJSON(out, auto_unbox = TRUE),
     "_stats/api/v1/data/alberta/latest/index.json")
 writeLines(toJSON(out, auto_unbox = TRUE),
-    paste0("_stats/api/v1/data/alberta/", as.Date(Sys.time()), ".json"))
+    paste0("_stats/api/v1/data/alberta/", TODAY, ".json"))
 
 #tab1n <- tab[[1]][-(1:2),c(1,2,4,6,8)]
 #colnames(tab1n) <- c("Age", "Female", "Male", "Unknown", "All")
@@ -402,7 +403,7 @@ writeLines(toJSON(dd),
   "_stats/api/v1/data/world/deaths/index.json")
 
 cat("OK\nSaving Koronavirus ... ")
-Dt <- as.character(Sys.Date())
+Dt <- as.character(TODAY)
 Fn <- paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg")
 try(utils::download.file(paste0("https://koronavirus.gov.hu/sites/default/files/", Fn),
   paste0("_stats/data/", Fn)))
@@ -434,11 +435,15 @@ f2 <- function(zzz) {
 }
 
 baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
-SEQ <- as.character(seq(as.Date("2020-03-20"), Sys.Date(), 1))
+SEQ <- as.character(seq(as.Date("2020-03-20"), TODAY, 1))
 Map <- list()
 for (i in SEQ) {
   cat(i, "\n")
-  tmp <- fromJSON(paste0(baseurl, i, ".json"))
+  tmp <- if (i == SEQ[length(SEQ)]) {
+    fromJSON(paste0("_stats/api/v1/data/alberta/", i, ".json"))
+  } else {
+    fromJSON(paste0(baseurl, i, ".json"))
+  }
   if ("areas" %in% names(tmp)) {
     Map[[i]] <- tmp[["areas"]]
   } else {
