@@ -404,9 +404,18 @@ writeLines(toJSON(dd),
 
 cat("OK\nSaving Koronavirus ... ")
 Dt <- as.character(TODAY)
-Fn <- paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg")
-try(utils::download.file(paste0("https://koronavirus.gov.hu/sites/default/files/", Fn),
-  paste0("_stats/data/", Fn)))
+## pretty sloppy deployment...
+Fn <- c(
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png"),
+  paste0("trkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
+  paste0("trkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png")
+)
+for (i in seq_along(Fn)) {
+  try(utils::download.file(
+    paste0("https://koronavirus.gov.hu/sites/default/files/", Fn[i]),
+    paste0("_stats/data/", Fn[i])))
+}
 
 cat("OK\nUpdating AB area level data ... ")
 
