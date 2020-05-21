@@ -289,6 +289,11 @@ d2d <- read.csv(paste0(f0, "time_series_covid19_deaths_global.csv"),
 #d2r <- read.csv(paste0(f0, "time_series_covid19_recovered_global.csv"),
 #                stringsAsFactors = FALSE, check.names=FALSE)
 
+d1c <- d1c[!is.na(d1c$UID),]
+d1d <- d1d[!is.na(d1d$UID),]
+d1c <- d1c[order(d1c$UID),]
+d1d <- d1d[order(d1d$UID),]
+
 st <- sort(unique(d1c$Province_State))
 cold <- grepl("/", colnames(d1c))
 d3c <- d3d <- matrix(NA, length(st), sum(cold))
@@ -303,12 +308,11 @@ for (i in st) {
   xy3[i,"Lat"] <- median(d1c[ii, "Lat"])
 }
 
-d1c <- d1c[!is.na(d1c$UID),]
-d1d <- d1d[!is.na(d1d$UID),]
 clast1 <- colnames(d1c)[ncol(d1c)]
 l1c <- d1c[,!cold]
 l1d <- d1d[,!cold]
 stopifnot(all(l1c$UID==l1d$UID))
+
 l1c$Confirmed <- d1c[,clast1]
 l1c$Deaths <- d1d[,clast1]
 
@@ -316,11 +320,15 @@ clast2 <- colnames(d2c)[ncol(d2c)]
 l2c <- d2c[,1:4]
 l2d <- d2d[,1:4]
 #l2r <- d2r[,1:4]
-stopifnot(all(l2c$UID==l2d$UID))
-#stopifnot(all(l2c$UID==l2r$UID))
 l2c$Combined_Key <- ifelse(l2c[["Province/State"]] == "",
   l2c[["Country/Region"]],
   paste0(l2c[["Country/Region"]], ", ", l2c[["Province/State"]]))
+l2d$Combined_Key <- ifelse(l2d[["Province/State"]] == "",
+  l2d[["Country/Region"]],
+  paste0(l2d[["Country/Region"]], ", ", l2d[["Province/State"]]))
+l2c <- l2c[order(l2c$Combined_Key),]
+l2d <- l2d[order(l2d$Combined_Key),]
+stopifnot(all(l2c$Combined_Key==l2d$Combined_Key))
 l2c$Confirmed <- d2c[,clast2]
 l2c$Deaths <- d2d[,clast2]
 #l2c$Recovered <- d2r[,clast2]
