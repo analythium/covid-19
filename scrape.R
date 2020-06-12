@@ -412,12 +412,16 @@ writeLines(toJSON(dd),
 
 cat("OK\nSaving Koronavirus ... ")
 Dt <- as.character(TODAY)
+Dt0 <- as.character(as.Date(TODAY)-1)
+Dt1 <- as.character(as.Date(TODAY)+1)
 ## pretty sloppy deployment...
 Fn <- c(
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpg"),
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".png"),
   paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
   paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png"),
-  paste0("trkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
-  paste0("trkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png")
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpg"),
+  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".png")
 )
 for (i in seq_along(Fn)) {
   try(utils::download.file(
