@@ -463,35 +463,40 @@ SEQ <- as.character(seq(as.Date("2020-03-20"), TODAY, 1))
 Map <- list()
 for (i in SEQ) {
   cat(i, "\n")
-  tmp <- if (i == SEQ[length(SEQ)]) {
-    fromJSON(paste0("_stats/api/v1/data/alberta/", i, ".json"))
-  } else {
-    fromJSON(paste0(baseurl, i, ".json"))
-  }
-  if ("areas" %in% names(tmp)) {
-    Map[[i]] <- tmp[["areas"]]
-  } else {
-    for (j in names(tmp)) {
-      if (!is.null(tmp[[j]]$x$options$crs$crsClass)) {
-        z <- tmp[[j]]
-        if (i %in% c("2020-03-21", "2020-03-23")) {
-          zz <- f1(z$x$calls[[2]][[2]][[7]])
-          Map[[i]] <- list(area=sapply(zz, "[[", 1),
-            cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
-        } else {
-          # Municipality
-          zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
-          # Local geographic area
-          zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
-          Map[[i]] <- list(municipalities=zzM, local=zzG)
-          if (nrow(Map[[i]]$local)<=1)
-            Map[[i]]$local <- NULL
+  tmp <- try({
+    if (i == SEQ[length(SEQ)]) {
+      fromJSON(paste0("_stats/api/v1/data/alberta/", i, ".json"))
+    } else {
+      fromJSON(paste0(baseurl, i, ".json"))
+    }
+  })
+  if (!inherits(tmp, "try-error")) {
+    if ("areas" %in% names(tmp)) {
+      Map[[i]] <- tmp[["areas"]]
+    } else {
+      for (j in names(tmp)) {
+        if (!is.null(tmp[[j]]$x$options$crs$crsClass)) {
+          z <- tmp[[j]]
+          if (i %in% c("2020-03-21", "2020-03-23")) {
+            zz <- f1(z$x$calls[[2]][[2]][[7]])
+            Map[[i]] <- list(area=sapply(zz, "[[", 1),
+              cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
+          } else {
+            # Municipality
+            zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+            # Local geographic area
+            zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+            Map[[i]] <- list(municipalities=zzM, local=zzG)
+            if (nrow(Map[[i]]$local)<=1)
+              Map[[i]]$local <- NULL
+          }
         }
       }
     }
   }
 }
 
+SEQ <- names(Map)
 n <- length(Map)
 Areas <- as.character(Map[[n]]$local[,1])
 Munic <- as.character(Map[[n]]$municipalities[,1])
