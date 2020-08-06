@@ -411,26 +411,31 @@ writeLines(toJSON(dd),
   "_stats/api/v1/data/world/deaths/index.json")
 
 cat("OK\nSaving Koronavirus ... ")
-Dt <- as.character(TODAY)
-Dt0 <- as.character(as.Date(TODAY)-1)
-Dt1 <- as.character(as.Date(TODAY)+1)
+#Dt <- as.character(TODAY)
+#Dt0 <- as.character(as.Date(TODAY)-1)
+#Dt1 <- as.character(as.Date(TODAY)+1)
 ## pretty sloppy deployment...
-Fn <- c(
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpeg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".png"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpeg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpeg"),
-  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".png")
-)
-for (i in seq_along(Fn)) {
-  try(utils::download.file(
-    paste0("https://koronavirus.gov.hu/sites/default/files/", Fn[i]),
-    paste0("_stats/data/", Fn[i])))
-}
+#Fn <- c(
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpeg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".png"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpeg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpeg"),
+#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".png")
+#)
+#for (i in seq_along(Fn)) {
+#  try(utils::download.file(
+#    paste0("https://koronavirus.gov.hu/sites/default/files/", Fn[i]),
+#    paste0("_stats/data/", Fn[i])))
+#}
+hu_lnk <- html_attr(
+  html_nodes(
+    read_html("https://koronavirus.gov.hu/terkepek/fertozottek"), 'img'), 'src')
+try(utils::download.file(hu_lnk, paste0("_stats/data/", basename(hu_lnk))))
+
 
 cat("OK\nUpdating AB area level data ... ")
 
@@ -551,4 +556,3 @@ saveWidget(l, "map.html")
 setwd(od)
 
 cat("OK\nDONE\n\n")
-
