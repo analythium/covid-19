@@ -504,18 +504,26 @@ for (i in SEQ) {
 SEQ <- names(Map)
 n <- length(Map)
 Areas <- as.character(Map[[n]]$local[,1])
+tmp <- sapply(strsplit(Areas, " (", fixed=TRUE), "[[", 1L)
+tmp2 <- gsub(" ", "", tolower(tmp))
+Ar <- data.frame(
+  new=Areas,
+  new_short=tmp,
+  new_lower=tmp2,
+  stringsAsFactors = FALSE)
 Munic <- as.character(Map[[n]]$municipalities[,1])
 AA <- matrix(NA, length(Areas), n)
-dimnames(AA) <- list(Areas, SEQ)
+dimnames(AA) <- list(Ar$new_lower, SEQ)
 MM <- matrix(NA, length(Munic), n)
 dimnames(MM) <- list(Munic, SEQ)
 for (i in 1:n) {
   if ("area" %in% names(Map[[i]])) {
-    AA[,i] <- Map[[i]]$cases[match(rownames(AA), Map[[i]]$area)]
+    AA[,i] <- Map[[i]]$cases[match(rownames(AA),
+                                   gsub(" ", "", tolower(Map[[i]]$area)))]
   }
   if ("local" %in% names(Map[[i]])) {
     AA[,i] <- Map[[i]]$local$Cases[match(rownames(AA),
-              Map[[i]]$local$Area)]
+              gsub(" ", "", tolower(Map[[i]]$local$Area)))]
   }
   if ("municipalities" %in% names(Map[[i]])) {
     MM[,i] <- Map[[i]]$municipalities$Cases[match(rownames(MM),
@@ -528,7 +536,7 @@ ss[is.na(ss)] <- FALSE
 AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
 
 cat("OK\nSaving RData ... ")
-save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM,
+save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar,
   file="_stats/data/covid-19.RData")
 
 cat("OK\nSaving world map ... ")

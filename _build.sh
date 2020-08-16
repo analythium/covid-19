@@ -4,7 +4,7 @@ set -ev
 
 Rscript update.R
 Rscript scrape.R
-Rscript render.R
+#Rscript render.R
 
 set -o errexit -o nounset
 
