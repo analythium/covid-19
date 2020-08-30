@@ -564,3 +564,4 @@ saveWidget(l, "map.html")
 setwd(od)
 
 cat("OK\nDONE\n\n")
+
