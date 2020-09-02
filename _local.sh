@@ -19,6 +19,8 @@ git add --all *
 git commit -m "Update json data (local)" || true
 git push -q origin gh-pages
 cd ..
+rm -rf _stats
+rm -rf output
 git add --all *
 git commit -m "Update map (local)" || true
 git push -q origin master
