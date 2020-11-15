@@ -567,7 +567,7 @@ save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar, Map,
 
 ## saving Alberta space-time data array
 cat("OK\nSaving AB spatal data ... ")
-save(AAA, MMM,
+save(AAA, MMM, Ar,
   file="_stats/data/covid-19-abmap.RData")
 
 
