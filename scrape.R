@@ -522,8 +522,15 @@ for (i in 1:n) {
                                    gsub(" ", "", tolower(Map[[i]]$area)))]
   }
   if ("local" %in% names(Map[[i]])) {
-    AA[,i] <- Map[[i]]$local$Cases[match(rownames(AA),
+    AA[,i] <- if (i <= 145) {
+        Map[[i]]$local$Cases[match(rownames(AA),
               gsub(" ", "", tolower(Map[[i]]$local$Area)))]
+    } else {
+        nm <- Map[[i]]$local$Area
+        tmp <- sapply(strsplit(nm, " (", fixed=TRUE), "[[", 1L)
+        tmp2 <- gsub(" ", "", tolower(tmp))
+        Map[[i]]$local$Cases[match(rownames(AA), tmp2)]
+    }
   }
   if ("municipalities" %in% names(Map[[i]])) {
     MM[,i] <- Map[[i]]$municipalities$Cases[match(rownames(MM),
