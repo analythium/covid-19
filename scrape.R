@@ -457,7 +457,7 @@ f2 <- function(zzz) {
   u <- grepl("Recovered", zzz)
   if (any(u))
     out$Recovered <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
-  u <- grepl("Death(s)", zzz)
+  u <- grepl("Death", zzz)
   if (any(u))
     out$Deaths <- as.integer(strsplit(zzz[which(u)], " ")[[1]][1])
   out
@@ -512,39 +512,64 @@ Ar <- data.frame(
   new_lower=tmp2,
   stringsAsFactors = FALSE)
 Munic <- as.character(Map[[n]]$municipalities[,1])
+
+## cases
 AA <- matrix(NA, length(Areas), n)
 dimnames(AA) <- list(Ar$new_lower, SEQ)
 MM <- matrix(NA, length(Munic), n)
 dimnames(MM) <- list(Munic, SEQ)
+## arrays
+d3 <- c("cases", "active", "recovered", "deaths")
+AAA <- array(NA, c(length(Areas), n, 4L))
+dimnames(AAA) <- list(Ar$new_lower, SEQ, d3)
+MMM <- array(NA, c(length(Munic), n, 4L))
+dimnames(MMM) <- list(Munic, SEQ, d3)
+
 for (i in 1:n) {
   if ("area" %in% names(Map[[i]])) {
-    AA[,i] <- Map[[i]]$cases[match(rownames(AA),
-                                   gsub(" ", "", tolower(Map[[i]]$area)))]
+    ii <- match(rownames(AA), gsub(" ", "", tolower(Map[[i]]$area)))
+    AA[,i] <- Map[[i]]$cases[ii]
+    AAA[,i,"cases"] <- Map[[i]]$cases[ii]
   }
   if ("local" %in% names(Map[[i]])) {
-    AA[,i] <- if (i <= 145) {
-        Map[[i]]$local$Cases[match(rownames(AA),
-              gsub(" ", "", tolower(Map[[i]]$local$Area)))]
+    if (i <= 145) {
+      ii <- match(rownames(AA), gsub(" ", "", tolower(Map[[i]]$local$Area)))
     } else {
-        nm <- Map[[i]]$local$Area
-        tmp <- sapply(strsplit(nm, " (", fixed=TRUE), "[[", 1L)
-        tmp2 <- gsub(" ", "", tolower(tmp))
-        Map[[i]]$local$Cases[match(rownames(AA), tmp2)]
+      nm <- Map[[i]]$local$Area
+      tmp <- sapply(strsplit(nm, " (", fixed=TRUE), "[[", 1L)
+      tmp2 <- gsub(" ", "", tolower(tmp))
+      ii <- match(rownames(AA), tmp2)
     }
+    AA[,i] <- Map[[i]]$local$Cases[ii]
+    AAA[,i,"cases"] <- Map[[i]]$local$Cases[ii]
+    AAA[,i,"active"] <- Map[[i]]$local$Active[ii]
+    AAA[,i,"recovered"] <- Map[[i]]$local$Recovered[ii]
+    AAA[,i,"deaths"] <- Map[[i]]$local$Deaths[ii]
   }
   if ("municipalities" %in% names(Map[[i]])) {
-    MM[,i] <- Map[[i]]$municipalities$Cases[match(rownames(MM),
-              Map[[i]]$municipalities$Area)]
+    ii <- match(rownames(MM), Map[[i]]$municipalities$Area)
+    MM[,i] <- Map[[i]]$municipalities$Cases[ii]
+    MMM[,i,"cases"] <- Map[[i]]$municipalities$Cases[ii]
+    MMM[,i,"active"] <- Map[[i]]$municipalities$Active[ii]
+    MMM[,i,"recovered"] <- Map[[i]]$municipalities$Recovered[ii]
+    MMM[,i,"deaths"] <- Map[[i]]$municipalities$Deaths[ii]
   }
 }
-
+## fixing some data archiving issues
 ss <- AA[,"2020-04-06"] == AA[,"2020-04-10"]
 ss[is.na(ss)] <- FALSE
 AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
+AAA[ss,c("2020-04-07", "2020-04-08", "2020-04-09"),] <- AAA[ss,"2020-04-06",]
 
 cat("OK\nSaving RData ... ")
 save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar, Map,
   file="_stats/data/covid-19.RData")
+
+## saving Alberta space-time data array
+cat("OK\nSaving AB spatal data ... ")
+save(AAA, MMM,
+  file="_stats/data/covid-19-abmap.RData")
+
 
 cat("OK\nSaving world map ... ")
 suppressPackageStartupMessages(library(leaflet))
