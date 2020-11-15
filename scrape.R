@@ -543,7 +543,7 @@ ss[is.na(ss)] <- FALSE
 AA[ss,c("2020-04-07", "2020-04-08", "2020-04-09")] <- AA[ss,"2020-04-06"]
 
 cat("OK\nSaving RData ... ")
-save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar,
+save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar, Map,
   file="_stats/data/covid-19.RData")
 
 cat("OK\nSaving world map ... ")
