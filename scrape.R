@@ -462,7 +462,8 @@ for (i in SEQ) {
       Map[[i]] <- tmp[["areas"]]
     } else {
       for (j in names(tmp)) {
-        if (!is.null(tmp[[j]]$x$options$crs$crsClass)) {
+        if (!is.null(tmp[[j]]$x$options$crs$crsClass)) { # node15
+          #break
           z <- tmp[[j]]
           if (i %in% c("2020-03-21", "2020-03-23")) {
             zz <- f1(z$x$calls[[2]][[2]][[7]])
@@ -477,7 +478,11 @@ for (i in SEQ) {
               do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
             }
             # Local geographic area
-            zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+            zzG <- if (as.Date(i) > as.Date("2020-11-24")) {
+              do.call(rbind, lapply(f1(z$x$calls[[2]][[4]][[7]]), f2))
+            } else {
+              do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+            }
             Map[[i]] <- list(municipalities=zzM, local=zzG)
             if (nrow(Map[[i]]$local)<=1)
               Map[[i]]$local <- NULL
