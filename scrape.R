@@ -32,7 +32,7 @@ TODAY <- as.Date(Sys.time())
 
 ## write json
 cat("OK\nWriting results for Alberta ... ")
-dir.create("_stats/api/v1/data")
+dir.create("_stats/api/v1/data", recursive=TRUE)
 dir.create("_stats/api/v1/data/alberta")
 dir.create("_stats/api/v1/data/alberta/latest")
 writeLines(toJSON(out, auto_unbox = TRUE),
@@ -411,29 +411,10 @@ writeLines(toJSON(dd),
   "_stats/api/v1/data/world/deaths/index.json")
 
 cat("OK\nSaving Koronavirus ... ")
-#Dt <- as.character(TODAY)
-#Dt0 <- as.character(as.Date(TODAY)-1)
-#Dt1 <- as.character(as.Date(TODAY)+1)
-## pretty sloppy deployment...
-#Fn <- c(
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".jpeg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt0, 9, 10), ".png"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".jpeg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt, 9, 10), ".png"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".jpeg"),
-#  paste0("terkep", substr(Dt, 6, 7), substr(Dt1, 9, 10), ".png")
-#)
-#for (i in seq_along(Fn)) {
-#  try(utils::download.file(
-#    paste0("https://koronavirus.gov.hu/sites/default/files/", Fn[i]),
-#    paste0("_stats/data/", Fn[i])))
-#}
 hu_lnk <- html_attr(
   html_nodes(
     read_html("https://koronavirus.gov.hu/terkepek/fertozottek"), 'img'), 'src')
+dir.create("_stats/data")
 try(utils::download.file(hu_lnk, paste0("_stats/data/", basename(hu_lnk))))
 
 
@@ -463,7 +444,8 @@ f2 <- function(zzz) {
   out
 }
 
-baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
+#baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
+baseurl <- "output/api/v1/data/alberta/"
 SEQ <- as.character(seq(as.Date("2020-03-20"), TODAY, 1))
 Map <- list()
 for (i in SEQ) {
@@ -488,7 +470,12 @@ for (i in SEQ) {
               cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
           } else {
             # Municipality
-            zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+            #zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+            zzM <- if (as.Date(i) > as.Date("2020-11-24")) {
+              do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+            } else {
+              do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+            }
             # Local geographic area
             zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
             Map[[i]] <- list(municipalities=zzM, local=zzG)

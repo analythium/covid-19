@@ -2,16 +2,19 @@
 
 set -ev
 
-Rscript update.R
-Rscript scrape.R
-#Rscript render.R
-
 set -o errexit -o nounset
 
 #git config --global user.email "psolymos@gmail.com"
 #git config --global user.name "Peter Solymos"
 
 git clone -b gh-pages https://github.com/analythium/covid-19.git output
+
+
+Rscript update.R
+Rscript scrape.R
+#Rscript render.R
+
+
 cd output
 cp -r ../_stats/* ./
 cp -r ../www/* ./
