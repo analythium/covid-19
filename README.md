@@ -1,5 +1,12 @@
 # covid-19
-> COVID-19 analysis
+
+> This reporitory provides the data processing for the  [**COVID-19 App**](https://hub.analythium.io/covidapp/) by Analythium.
+
+[![Build Status](https://travis-ci.org/analythium/covid-19.svg?branch=master)](https://travis-ci.org/analythium/covid-19)
+
+## Global
+
+### Data sources
 
 This project takes the data from https://github.com/CSSEGISandData/COVID-19,
 does some data wrangling, fits exponential smoothing state space model,
@@ -7,16 +14,39 @@ and deploys the forecast along the raw data as a
 static JSON API using GitHub pages.
 Countries with multiple provinces/states are also combined.
 
+### API
+
 The API is based on the slugified region names that are listed here:
-https://analythium.github.io/covid-19/api/v1/regions/
+https://hub.analythium.io/covid-19/api/v1/regions/
 
 For example the slug `canada-combined` takes us to
-https://analythium.github.io/covid-19/api/v1/regions/canada-combined/
+https://hub.analythium.io/covid-19/api/v1/regions/canada-combined/
 
-The date of last update and R session info can be found at
-https://analythium.github.io/covid-19/api/v1/
+The date of last update and session info can be found at
+https://hub.analythium.io/covid-19/api/v1/
 
-Travis CI is updating the API using a daily cron job:
-https://travis-ci.org/github/analythium/covid-19
+Latest workdwide cases with latitude/longitude: https://hub.analythium.io/covid-19/api/v1/data/world/latest
 
-We also scrape the Alberta COVID-19 report: https://covid19stats.alberta.ca/
+## Canada
+
+### Data sources
+
+https://health-infobase.canada.ca/src/data/covidLive/covid19.csv
+
+### API
+
+https://hub.analythium.io/covid-19/api/v1/data/canada/regions
+
+## Alberta
+
+### Data sources
+
+We scrape the Alberta COVID-19 report: https://covid19stats.alberta.ca/
+
+### API
+
+Go to https://hub.analythium.io/covid-19/api/v1/data/alberta/latest.
+
+Daily data are avaibale as https://hub.analythium.io/covid-19/api/v1/data/alberta/2020-10-22.json. 
+Note: this data set is a raw data dump for archival purposes, format/structure has changed over the months.
+
