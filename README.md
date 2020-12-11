@@ -11,7 +11,7 @@
 This project takes the data from https://github.com/CSSEGISandData/COVID-19,
 does some data wrangling, fits exponential smoothing state space model,
 and deploys the forecast along the raw data as a
-static JSON API using GitHub pages.
+static JSON API.
 Countries with multiple provinces/states are also combined.
 
 ### API
