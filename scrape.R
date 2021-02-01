@@ -410,12 +410,12 @@ dir.create("_stats/api/v1/data/world/deaths")
 writeLines(toJSON(dd),
   "_stats/api/v1/data/world/deaths/index.json")
 
-cat("OK\nSaving Koronavirus ... ")
-hu_lnk <- html_attr(
-  html_nodes(
-    read_html("https://koronavirus.gov.hu/terkepek/fertozottek"), 'img'), 'src')
 dir.create("_stats/data")
-try(utils::download.file(hu_lnk, paste0("_stats/data/", basename(hu_lnk))))
+#cat("OK\nSaving Koronavirus ... ")
+#hu_lnk <- html_attr(
+#  html_nodes(
+#    read_html("https://koronavirus.gov.hu/terkepek/fertozottek"), 'img'), 'src')
+#try(utils::download.file(hu_lnk, paste0("_stats/data/", basename(hu_lnk))))
 
 
 cat("OK\nUpdating AB area level data ... ")
