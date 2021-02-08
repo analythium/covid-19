@@ -2,7 +2,7 @@
 
 > This reporitory provides the data processing for the  [**COVID-19 App**](https://hub.analythium.io/covidapp/) by Analythium.
 
-![deploy](https://github.com/analythium/covid-19/workflows/deploy/badge.svg)
+[![deploy](https://github.com/analythium/covid-19/workflows/deploy/badge.svg)](https://github.com/analythium/covid-19/actions)
 
 ## Global
 
