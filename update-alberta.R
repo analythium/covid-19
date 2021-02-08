@@ -4,6 +4,8 @@ cat("Loading packages ... ")
 suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(xml2))
 suppressPackageStartupMessages(library(rvest))
+suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(htmlwidgets))
 source("functions.R")
 
 cat("OK\nGetting & parsing html ... ")
@@ -343,8 +345,6 @@ save(AAA, MMM, Ar,
 
 
 cat("OK\nSaving world map ... ")
-suppressPackageStartupMessages(library(leaflet))
-suppressPackageStartupMessages(library(htmlwidgets))
 
 l <- leaflet(q) %>% addTiles() %>%
   addCircleMarkers(
@@ -362,9 +362,8 @@ l <- leaflet(q) %>% addTiles() %>%
       addLayersControl(baseGroups = c("OpenStreetmap","Esri.OceanBasemap",
         "DarkMatter (CartoDB)", "Esri.WorldImagery"),
         options = layersControlOptions(collapsed = TRUE, autoZIndex = FALSE))
-od <- setwd("www")
+od <- setwd("output")
 saveWidget(l, "map.html")
 setwd(od)
-
 cat("OK\nDONE\n\n")
 

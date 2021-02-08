@@ -83,3 +83,4 @@ writeLines(toJSON(z, na="null"),
     "output/api/v1/data/canada/regions/index.json")
 writeLines(toJSON(all, dataframe="columns", na="null"),
     "output/api/v1/data/canada/index.json")
+cat("OK\nDONE\n\n")
