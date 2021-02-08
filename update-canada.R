@@ -77,7 +77,7 @@ for (i in cn) {
 }
 
 cat("OK\nWriting results for Canada ... ")
-dir.create("output/api/v1/data/canada")
+dir.create("output/api/v1/data/canada", recursive=TRUE)
 dir.create("output/api/v1/data/canada/regions")
 writeLines(toJSON(z, na="null"),
     "output/api/v1/data/canada/regions/index.json")
