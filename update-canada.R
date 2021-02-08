@@ -1,8 +1,9 @@
 ## Canada data
 
-cat("OK\nNormalizing CSV ... ")
+suppressPackageStartupMessages(library(jsonlite))
 source("functions.R")
 
+cat("OK\nNormalizing CSV ... ")
 fn <- "https://health-infobase.canada.ca/src/data/covidLive/covid19.csv"
 h <- read.csv(fn, nrows=1)
 ccl <- c("pruid"="integer", "prname"="character", "prnameFR"="character",
