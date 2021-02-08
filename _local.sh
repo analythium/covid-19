@@ -9,22 +9,18 @@ set -o errexit -o nounset
 
 git clone -b gh-pages https://github.com/analythium/covid-19.git output
 
-
-Rscript update.R
-Rscript scrape.R
+Rscript update-global.R
+Rscript update-canada.R
+Rscript update-alberta.R
 #Rscript render.R
 
-
 cd output
-cp -r ../_stats/* ./
-cp -r ../www/* ./
 git add --all *
 git commit -m "Update json data (local)" || true
 git push -q origin gh-pages
 cd ..
-rm -rf _stats
-rm -rf output
-git add --all *
-git commit -m "Update map (local)" || true
-git push -q origin master
+#rm -rf output
+#git add --all *
+#git commit -m "Update map (local)" || true
+#git push -q origin master
 
