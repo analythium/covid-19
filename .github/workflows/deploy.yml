@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2"))'
+          Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2", "leaflet", "htmlwidgets"))'
 
       - name: Run scripts
         run: |
