@@ -1,0 +1,40 @@
+on:
+#  schedule:
+    # * is a special character in YAML so you have to quote this string
+#    - cron:  '0 22 * * *'
+  push:
+    branches:
+      - main
+      - master
+
+name: deploy
+
+jobs:
+  deploy:
+    runs-on: macOS-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: R setup
+        uses: r-lib/actions/setup-r@v1
+
+      - name: Install dependencies
+        run: |
+          Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2"))'
+
+      - name: Run scripts
+        run: |
+          Rscript update-global.R
+          Rscript update-canada.R
+          Rscript update-alberta.R
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@3.7.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages # The branch the action should deploy to.
+          FOLDER: output # The folder the action should deploy.
+          CLEAN: false # Automatically remove deleted files from the deploy branch
