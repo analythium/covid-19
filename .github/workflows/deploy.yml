@@ -21,7 +21,10 @@ jobs:
       - name: R setup
         uses: r-lib/actions/setup-r@v1
 
-      - name: Install dependencies
+      - name: Install pandoc
+        run: brew install pandoc
+
+      - name: Install R packages
         run: |
           Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2", "leaflet", "htmlwidgets"))'
 
