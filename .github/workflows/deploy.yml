@@ -8,17 +8,15 @@ jobs:
   deploy:
     runs-on: macOS-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - name: R setup
+      - name: Setup
         uses: r-lib/actions/setup-r@v1
 
-      - name: Install pandoc
-        run: brew install pandoc
-
-      - name: Install R packages
+      - name: Install
         run: |
+          brew install pandoc
           Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2", "leaflet", "htmlwidgets"))'
 
       - name: Run scripts
