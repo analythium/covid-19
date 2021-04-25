@@ -19,10 +19,14 @@ jobs:
           brew install pandoc
           Rscript -e 'install.packages(c("jsonlite", "forecast", "rvest", "xml2", "leaflet", "htmlwidgets"))'
 
-      - name: Run scripts
+      - name: Run Global scripts
         run: |
           Rscript update-global.R
+      - name: Run Canada scripts
+        run: |
           Rscript update-canada.R
+      - name: Run Alberta scripts
+        run: |
           Rscript update-alberta.R
 
       - name: Deploy
