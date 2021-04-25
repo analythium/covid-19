@@ -251,18 +251,25 @@ for (i in SEQ) {
             Map[[i]] <- list(area=sapply(zz, "[[", 1),
               cases=as.integer(gsub(" case(s)", "", sapply(zz, "[[", 2), fixed=TRUE)))
           } else {
-            # Municipality
-            #zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
-            zzM <- if (as.Date(i) > as.Date("2020-11-24")) {
-              do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+            if (as.Date(i) > as.Date("2021-04-23")) {
+              # Municipality: 116
+              zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[5]]), f2))
+              # Local geographic area: 133
+              zzG <- do.call(rbind, lapply(f1(z$x$calls[[2]][[4]][[5]]), f2))
             } else {
-              do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
-            }
-            # Local geographic area
-            zzG <- if (as.Date(i) > as.Date("2020-11-24")) {
-              do.call(rbind, lapply(f1(z$x$calls[[2]][[4]][[7]]), f2))
-            } else {
-              do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+              # Municipality: 116
+              #zzM <- do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+              zzM <- if (as.Date(i) > as.Date("2020-11-24")) {
+                do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+              } else {
+                do.call(rbind, lapply(f1(z$x$calls[[2]][[2]][[7]]), f2))
+              }
+              # Local geographic area: 133
+              zzG <- if (as.Date(i) > as.Date("2020-11-24")) {
+                do.call(rbind, lapply(f1(z$x$calls[[2]][[4]][[7]]), f2))
+              } else {
+                do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
+              }
             }
             Map[[i]] <- list(municipalities=zzM, local=zzG)
             if (nrow(Map[[i]]$local)<=1)
