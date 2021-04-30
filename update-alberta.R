@@ -243,7 +243,10 @@ for (i in SEQ) {
       Map[[i]] <- tmp[["areas"]]
     } else {
       for (j in names(tmp)) {
-        if (!is.null(tmp[[j]]$x$options$crs$crsClass)) { # node15
+
+        Check1 <- !is.null(tmp[[j]]$x$options$crs$crsClass)
+
+        if (Check1) { # node15
           #break
           z <- tmp[[j]]
           if (i %in% c("2020-03-21", "2020-03-23")) {
@@ -271,9 +274,12 @@ for (i in SEQ) {
                 do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
               }
             }
-            Map[[i]] <- list(municipalities=zzM, local=zzG)
-            if (nrow(Map[[i]]$local)<=1)
-              Map[[i]]$local <- NULL
+            if (nrow(zzM) > 5) {
+              #print(dim(zzM))
+              Map[[i]] <- list(municipalities=zzM, local=zzG)
+              if (nrow(Map[[i]]$local)<=1)
+                Map[[i]]$local <- NULL
+            }
           }
         }
       }
