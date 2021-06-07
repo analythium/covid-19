@@ -284,6 +284,9 @@ for (i in SEQ) {
         }
       }
     }
+  } else {
+    cat("Error loading JSON blob: used blob from previous day\n")
+    Map[[i]] <- Map[[length(Map)]]
   }
 }
 
