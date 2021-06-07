@@ -274,7 +274,8 @@ for (i in SEQ) {
                 do.call(rbind, lapply(f1(z$x$calls[[2]][[3]][[7]]), f2))
               }
             }
-            if (nrow(zzM) > 5) {
+            if (nrow(zzM) > 5 && sum(zzM[,-1]) != 0) {
+              cat(j, "\n")
               #print(dim(zzM))
               Map[[i]] <- list(municipalities=zzM, local=zzG)
               if (nrow(Map[[i]]$local)<=1)
