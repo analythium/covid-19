@@ -227,6 +227,9 @@ cat("OK\nUpdating AB area level data ... ")
 #baseurl <- "output/api/v1/data/alberta/"
 baseurl <- "https://analythium.github.io/covid-19/api/v1/data/alberta/"
 
+## check out, and not read over http
+#git clone --branch gh-pages https://github.com/analythium/covid-19.git ghtemp
+
 SEQ <- as.character(seq(as.Date("2020-03-20"), TODAY, 1))
 Map <- list()
 for (i in SEQ) {
@@ -235,7 +238,8 @@ for (i in SEQ) {
     if (i == SEQ[length(SEQ)]) {
       fromJSON(paste0("output/api/v1/data/alberta/", i, ".json"))
     } else {
-      fromJSON(paste0(baseurl, i, ".json"))
+      #fromJSON(paste0(baseurl, i, ".json"))
+      fromJSON(paste0("ghtemp/api/v1/data/alberta/", i, ".json"))
     }
   })
   if (!inherits(tmp, "try-error")) {
@@ -356,7 +360,7 @@ save(out, z, all, ab, abr, abd, q, dc, dd, AA, MM, Ar, Map,
   file="output/data/covid-19.RData")
 
 ## saving Alberta space-time data array
-cat("OK\nSaving AB spatal data ... ")
+cat("OK\nSaving AB spatial data ... ")
 save(AAA, MMM, Ar,
   file="output/data/covid-19-abmap.RData")
 
