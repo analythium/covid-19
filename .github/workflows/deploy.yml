@@ -27,6 +27,7 @@ jobs:
           Rscript update-canada.R
       - name: Run Alberta scripts
         run: |
+          git clone --branch gh-pages https://github.com/analythium/covid-19.git ghtemp
           Rscript update-alberta.R
 
       - name: Deploy
