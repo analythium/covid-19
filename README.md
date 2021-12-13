@@ -25,7 +25,7 @@ https://hub.analythium.io/covid-19/api/v1/regions/canada-combined/
 The date of last update and session info can be found at
 https://hub.analythium.io/covid-19/api/v1/
 
-Latest workdwide cases with latitude/longitude: https://hub.analythium.io/covid-19/api/v1/data/world/latest
+Latest workdwide cases with latitude and longitude: https://hub.analythium.io/covid-19/api/v1/data/world/latest
 
 ## Canada
 
