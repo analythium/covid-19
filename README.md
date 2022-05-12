@@ -49,3 +49,7 @@ Go to https://hub.analythium.io/covid-19/api/v1/data/alberta/latest.
 
 Daily data are avaibale as https://hub.analythium.io/covid-19/api/v1/data/alberta/2020-10-22.json. 
 Note: this data set is a raw data dump for archival purposes, format/structure has changed over the months.
+
+## License
+
+MIT (c) 2019-2022 Analythium Solutions Inc.
